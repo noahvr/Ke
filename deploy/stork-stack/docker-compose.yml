@@ -1,0 +1,127 @@
+name: kea-stork
+
+services:
+  # --- Stork server database -------------------------------------------------
+  postgres:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: stork
+      POSTGRES_PASSWORD: ${STORK_DATABASE_PASSWORD:-stork}
+      POSTGRES_DB: stork
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./postgres/initdb:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U stork -d stork"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  # --- Stork server (management UI + REST API) -------------------------------
+  stork-server:
+    build: ./stork-server
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      STORK_DATABASE_HOST: postgres
+      STORK_DATABASE_PORT: "5432"
+      STORK_DATABASE_NAME: stork
+      STORK_DATABASE_USER_NAME: stork
+      STORK_DATABASE_PASSWORD: ${STORK_DATABASE_PASSWORD:-stork}
+      # Expose Stork server's own metrics at /metrics for Prometheus.
+      STORK_SERVER_ENABLE_METRICS: "true"
+    ports:
+      - "${STORK_UI_PORT:-8080}:8080"
+
+  # --- Kea DHCPv4 + Stork agent (single container, like one real host) -------
+  kea:
+    build: ./kea
+    restart: unless-stopped
+    hostname: kea
+    depends_on:
+      - stork-server
+    environment:
+      # The agent self-registers against the server on startup; the new
+      # machine must then be authorized once in the Stork UI (Services ->
+      # Machines -> Unauthorized).
+      STORK_AGENT_SERVER_URL: http://stork-server:8080
+      # Address/port the server uses to reach the agent's gRPC endpoint.
+      STORK_AGENT_HOST: kea
+      STORK_AGENT_PORT: "8080"
+    cap_add:
+      - NET_RAW
+      - NET_ADMIN
+    networks:
+      default:
+        ipv4_address: 172.42.0.10
+    volumes:
+      # Read-write so config edits made through Stork (subnet_cmds +
+      # config-write) persist back to this directory.
+      - ./kea/config:/etc/kea
+      - kea-leases:/var/lib/kea
+      - stork-agent-certs:/var/lib/stork-agent
+
+  # --- Prometheus (time-series storage; scrapes the agent's Kea exporter) ----
+  prometheus:
+    image: prom/prometheus:v3.8.0
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.retention.time=${PROMETHEUS_RETENTION:-180d}
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:9090"
+
+  # --- Grafana (trend dashboards, auto-provisioned) ---------------------------
+  grafana:
+    image: grafana/grafana:12.3.0
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    ports:
+      - "${GRAFANA_PORT:-3000}:3000"
+
+  # --- Optional DHCP traffic generator (start with: --profile traffic up) ----
+  dhcp-client-sim:
+    build: ./kea
+    profiles: [traffic]
+    restart: unless-stopped
+    depends_on:
+      - kea
+    cap_add:
+      - NET_RAW
+    entrypoint: ["/usr/sbin/perfdhcp"]
+    # 2 requests/s from a pool of 300 simulated clients, in 120 s bursts
+    # (restart policy loops it, so graphs show continuous activity).
+    command: ["-4", "-r", "2", "-R", "300", "-p", "120", "172.42.0.10"]
+
+networks:
+  default:
+    driver: bridge
+    ipam:
+      config:
+        # Docker assigns container addresses from 172.42.0.0/26 only, so the
+        # Kea pool (172.42.0.100-250, see kea/config/kea-dhcp4.conf) never
+        # collides with Docker's own IPAM.
+        - subnet: 172.42.0.0/24
+          ip_range: 172.42.0.0/26
+          gateway: 172.42.0.1
+
+volumes:
+  postgres-data:
+  prometheus-data:
+  grafana-data:
+  kea-leases:
+  stork-agent-certs:

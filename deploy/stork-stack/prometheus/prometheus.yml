@@ -1,0 +1,19 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  # Kea statistics via the Stork agent's built-in Prometheus exporter
+  # (per-subnet stats are exported by default).
+  - job_name: kea
+    static_configs:
+      - targets: ["kea:9547"]
+
+  # Stork server's own metrics (machine/app counts, etc.).
+  - job_name: stork-server
+    static_configs:
+      - targets: ["stork-server:8080"]
+
+  - job_name: prometheus
+    static_configs:
+      - targets: ["localhost:9090"]

@@ -65,6 +65,9 @@ services:
       - stork-agent-certs:/var/lib/stork-agent
 
   # --- Prometheus (time-series storage; scrapes the agent's Kea exporter) ----
+  # Visualization is handled by an external Grafana on another machine; it
+  # queries this Prometheus over the published port. See README.md
+  # ("Visualization with an external Grafana").
   prometheus:
     image: prom/prometheus:v3.8.0
     restart: unless-stopped
@@ -76,22 +79,6 @@ services:
       - prometheus-data:/prometheus
     ports:
       - "${PROMETHEUS_PORT:-9090}:9090"
-
-  # --- Grafana (trend dashboards, auto-provisioned) ---------------------------
-  grafana:
-    image: grafana/grafana:12.3.0
-    restart: unless-stopped
-    depends_on:
-      - prometheus
-    environment:
-      GF_SECURITY_ADMIN_USER: admin
-      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
-    volumes:
-      - ./grafana/provisioning:/etc/grafana/provisioning:ro
-      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
-      - grafana-data:/var/lib/grafana
-    ports:
-      - "${GRAFANA_PORT:-3000}:3000"
 
   # --- Optional DHCP traffic generator (start with: --profile traffic up) ----
   dhcp-client-sim:
@@ -122,6 +109,5 @@ networks:
 volumes:
   postgres-data:
   prometheus-data:
-  grafana-data:
   kea-leases:
   stork-agent-certs:

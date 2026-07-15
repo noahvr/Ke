@@ -1,3 +1,7 @@
+# Optional, file-based dashboard provisioning for the EXTERNAL Grafana.
+# Copy to /etc/grafana/provisioning/dashboards/stork.yml on the Grafana
+# machine and copy the ../../dashboards/*.json files to the path below.
+# Alternatively skip this file and import the JSONs via the Grafana UI.
 apiVersion: 1
 
 providers:

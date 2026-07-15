@@ -1,12 +1,16 @@
+# Copy to the EXTERNAL Grafana machine as
+#   /etc/grafana/provisioning/datasources/kea-prometheus.yml
+# and replace <stack-host> with the address of the machine running this
+# docker-compose stack. Restart Grafana afterwards.
 apiVersion: 1
 
 datasources:
-  - name: Prometheus
+  - name: Kea Prometheus
     type: prometheus
     access: proxy
-    url: http://prometheus:9090
-    isDefault: true
+    url: http://<stack-host>:9090
     # The Stork-provided dashboards reference the datasource by this exact
-    # UID; do not change it or the panels will show "datasource not found".
+    # UID. Keep it, or rewrite the UID inside the dashboard JSON files
+    # instead (see README.md).
     uid: PBFA97CFB590B2093
     editable: false

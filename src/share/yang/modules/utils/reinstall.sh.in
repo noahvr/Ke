@@ -1,0 +1,172 @@
+#!/bin/sh
+
+# Copyright (C) 2021-2026 Internet Systems Consortium, Inc. ("ISC")
+#
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+# Usage:
+#
+# reinstall.sh [-d|--debug] [-h|--help] [-s|--sysrepo ${SYSREPO_INSTALLATION}]
+
+# Exit with error if commands exit with non-zero and if undefined variables are
+# used.
+set -eu
+
+# Print usage.
+# Expressions don't expand in single quotes, use double quotes for that. [SC2016]
+# shellcheck disable=SC2016
+print_usage() {
+  printf \
+'Usage: %s {{options}}
+Options:
+  [-d|--debug]                              enable debug mode, showing every executed command
+  [-h|--help]                               print usage (this text)
+  [-s|--sysrepo ${SYSREPO_INSTALLATION}]    point to sysrepo installation which is needed for sysrepoctl
+  [-u|--uninstall-first]                    uninstall before installing
+' \
+    "$(basename "${0}")"
+}
+
+# Define some ANSI color codes.
+if test -t 1; then
+  red='\033[91m'
+  reset='\033[0m'
+else
+  red=
+  reset=
+fi
+
+# Parse parameters.
+while test ${#} -gt 0; do
+  case "${1}" in
+    # [-d|--debug]                              enable debug mode, showing every executed command
+    '-d'|'--debug') set -vx ;;
+
+    # [-h|--help]                               print usage (this text)
+    '-h'|'--help') print_usage; exit 0 ;;
+
+    # [-s|--sysrepo ${SYSREPO_INSTALLATION}]    point to sysrepo installation which is needed for sysrepoctl
+    '-s'|'--sysrepo') shift; sysrepo=${1} ;;
+
+    # [-u|--uninstall-first]                    uninstall before installing
+    '-u'|'--uninstall-first') uninstall_first=true ;;
+
+    # Unrecognized argument
+    *)
+    printf "${red}ERROR: Unrecognized argument '%s'${reset}\\n" "${1}" 1>&2; print_usage; exit 1 ;;
+  esac; shift
+done
+
+SYSREPO_PREFIX='@SYSREPO_PREFIX@'
+
+# Default arguments
+if test -z "${sysrepo+x}"; then
+  if test -d "${SYSREPO_PREFIX}"; then
+    sysrepo="${SYSREPO_PREFIX}"
+    LD_LIBRARY_PATH="${LD_LIBRARY_PATH-}:${SYSREPO_PREFIX}/lib:${SYSREPO_PREFIX}/lib64"
+    export LD_LIBRARY_PATH
+  else
+    sysrepo='/usr/local'
+  fi
+fi
+test -z "${uninstall_first+x}" && uninstall_first='false'
+
+#------------------------------------------------------------------------------#
+
+# Get script path.
+script_path=$(cd "$(dirname "${0}")" && pwd)
+
+# shellcheck disable=SC2034
+# prefix appears unused. Verify use (or export if used externally).
+# reason: prefix is used in datarootdir (@datarootdir@) below.
+prefix="@prefix@"
+
+# Find modules location. Prioritize installation.
+# If script is in sources, use modules from sources.
+# If script is in installation, use modules from installation.
+modules='@abs_top_srcdir@/src/share/yang/modules'
+if test "${script_path}" = "@datarootdir@/kea/yang/modules/utils"; then
+  modules="@datarootdir@/kea/yang/modules"
+fi
+if test -z "${modules+x}"; then
+  printf 'ERROR: cannot find location of modules. Use this script from sources or from installation.\n' >&2
+  exit 1
+fi
+
+# sysrepoctl does not set its rpath. Set LD_LIBRARY_PATH instead.
+export LD_LIBRARY_PATH="${LD_LIBRARY_PATH-}:${sysrepo}/lib:${sysrepo}/lib64"
+
+# Check if module is installed.
+is_module_installed() {
+  module=${1}
+  if test "$("${sysrepo}/bin/sysrepoctl" -l | grep -F '| I' | cut -d ' ' -f 1 | grep -Ec "^${module}")" -eq 0; then
+    # not installed
+    return 1
+  fi
+  # installed
+  return 0
+}
+
+# Install a module from the Kea sources. Should upgrade automatically to a newer
+# revision.
+install_kea_module() {
+  module=${1}
+
+  if is_module_installed "${module}"; then
+    # Upgrade.
+    flag="-U"
+  else
+    # Install.
+    flag="-i"
+  fi
+
+  # Find a module starting with given name and act on it.
+  find "${modules}" -maxdepth 1 -type f -name "${module}*.yang" -exec \
+    "${sysrepo}/bin/sysrepoctl" "${flag}" {} -s "${modules}" -v 4 \;
+}
+
+# Uninstall a module if installed.
+uninstall_module() {
+  module=${1}
+  if ! is_module_installed "${module}"; then
+    return;
+  fi
+  "${sysrepo}/bin/sysrepoctl" -u "${module}" -v 4
+}
+
+# Install all YANG modules in dependency order.
+install_yang_modules() {
+  install_kea_module 'keatest-module'
+  install_kea_module 'ietf-interfaces'
+  install_kea_module 'ietf-dhcpv6-common'
+  install_kea_module 'ietf-dhcpv6-client'
+  install_kea_module 'ietf-dhcpv6-relay'
+  install_kea_module 'ietf-dhcpv6-server'
+  install_kea_module 'ietf-yang-types'
+  install_kea_module 'ietf-dhcpv6-options'
+  install_kea_module 'ietf-dhcpv6-types'
+  install_kea_module 'ietf-inet-types'
+  install_kea_module 'kea-types'
+  install_kea_module 'kea-dhcp-types'
+  install_kea_module 'kea-dhcp-ddns'
+  install_kea_module 'kea-dhcp4-server'
+  install_kea_module 'kea-dhcp6-server'
+}
+
+# Uninstall all YANG modules in reverse dependency order. Only uninstalls Kea
+# modules. IETF modules might be dependencies to sysrepo internal modules.
+uninstall_yang_modules() {
+  uninstall_module 'kea-dhcp6-server'
+  uninstall_module 'kea-dhcp4-server'
+  uninstall_module 'kea-dhcp-ddns'
+  uninstall_module 'kea-dhcp-types'
+  uninstall_module 'kea-types'
+  uninstall_module 'keatest-module'
+}
+
+if "${uninstall_first}"; then
+  uninstall_yang_modules
+fi
+install_yang_modules

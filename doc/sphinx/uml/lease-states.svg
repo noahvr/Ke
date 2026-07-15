@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="us-ascii" standalone="no"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" contentStyleType="text/css" height="728px" preserveAspectRatio="none" style="width:617px;height:728px;background:#FFFFFF;" version="1.1" viewBox="0 0 617 728" width="617px" zoomAndPan="magnify">
+  <defs/>
+  <g>
+    <text fill="#000000" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacing" textLength="156" x="223.5" y="24.9659">lease states (Kea 1.8.0)</text>
+    <!--entity free-->
+    <g id="elem_free">
+      <rect fill="#F1F1F1" height="39.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="49" x="266.5" y="49.3979"/>
+      <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="29" x="276.5" y="74.3639">Free</text>
+    </g>
+    <g id="elem_GMN3">
+      <path d="M61,55.0779 L61,82.7839 A0,0 0 0 0 61,82.7839 L231,82.7839 A0,0 0 0 0 231,82.7839 L231,73.0779 L266.26,68.9379 L231,65.0779 L231,65.0779 L221,55.0779 L61,55.0779 A0,0 0 0 0 61,55.0779 " fill="#FEFFDD" style="stroke:#181818;stroke-width:0.5;"/>
+      <path d="M221,55.0779 L221,65.0779 L231,65.0779 L221,55.0779 " fill="#FEFFDD" style="stroke:#181818;stroke-width:0.5;"/>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="149" x="67" y="73.9749">not in the lease database</text>
+    </g>
+    <!--entity assigned-->
+    <g id="elem_assigned">
+      <rect fill="#F1F1F1" height="39.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="82" x="257" y="229.4679"/>
+      <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="62" x="267" y="254.4339">Assigned</text>
+    </g>
+    <!--entity assigned_expired-->
+    <g id="elem_assigned_expired">
+      <rect fill="#F1F1F1" height="39.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="137" x="353.5" y="347.5379"/>
+      <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="117" x="363.5" y="372.5039">Assigned expired</text>
+    </g>
+    <!--entity declined-->
+    <g id="elem_declined">
+      <rect fill="#F1F1F1" height="39.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="79" x="129.5" y="465.6079"/>
+      <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="59" x="139.5" y="490.5739">Declined</text>
+    </g>
+    <!--entity declined_expired-->
+    <g id="elem_declined_expired">
+      <rect fill="#F1F1F1" height="39.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="134" x="40" y="583.6679"/>
+      <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="114" x="50" y="608.6339">Declined expired</text>
+    </g>
+    <!--entity reclaimed-->
+    <g id="elem_reclaimed">
+      <rect fill="#F1F1F1" height="39.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="146" x="271" y="683.7379"/>
+      <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="126" x="281" y="708.7039">Expired-Reclaimed</text>
+    </g>
+    <!--link free to assigned-->
+    <g id="link_free_assigned">
+      <path d="M273.81,88.6079 C258.11,108.0179 238.52,139.5279 247,168.4679 C253.01,188.9779 266.11,209.2079 277.53,224.1279 " fill="none" id="free-to-assigned" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="280.39,227.7879,278.0148,218.2298,277.3173,223.8435,271.7036,223.146,280.39,227.7879" style="stroke:#181818;stroke-width:1.0;"/>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="70" x="248" y="164.3649">assignment</text>
+    </g>
+    <!--reverse link free to assigned-->
+    <g id="link_free_assigned">
+      <path d="M303.84,94.7279 C311.04,110.0579 319.3,130.3779 323,149.4679 C328.44,177.5379 316.98,209.5379 307.84,229.2579 " fill="none" id="free-backto-assigned" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="301.7,90.2779,302.0088,100.1219,303.8729,94.7811,309.2138,96.6452,301.7,90.2779" style="stroke:#181818;stroke-width:1.0;"/>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="80" x="326" y="164.3649">release query</text>
+    </g>
+    <!--link assigned to assigned_expired-->
+    <g id="link_assigned_assigned_expired">
+      <path d="M339.42,264.1779 C357.42,272.0179 377.63,283.3079 392,298.5379 C403.22,310.4379 410.71,327.2279 415.39,341.0879 " fill="none" id="assigned-to-assigned_expired" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="416.89,345.7879,417.9535,335.9966,415.3646,341.0263,410.3349,338.4373,416.89,345.7879" style="stroke:#181818;stroke-width:1.0;"/>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="106" x="405" y="313.4349">after valid lifetime</text>
+    </g>
+    <!--reverse link assigned to assigned_expired-->
+    <g id="link_assigned_assigned_expired">
+      <path d="M313.23,274.0979 C322.56,287.7579 335.31,304.6379 349,317.5379 C360.86,328.6979 375.55,339.0079 388.65,347.2279 " fill="none" id="assigned-backto-assigned_expired" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="310.55,270.0979,312.2372,279.8012,313.3334,274.2516,318.883,275.3478,310.55,270.0979" style="stroke:#181818;stroke-width:1.0;"/>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="33" x="350" y="313.4349">reuse</text>
+    </g>
+    <!--link assigned to assigned-->
+    <g id="link_assigned_assigned">
+      <path d="M339.43,239.7679 C357.97,238.8879 374,241.9679 374,248.9979 C374,255.2179 361.51,258.3379 345.82,258.3879 " fill="none" id="assigned-to-assigned" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="340.95,258.2679,349.8562,262.4725,345.9487,258.3822,350.0391,254.4746,340.95,258.2679" style="stroke:#181818;stroke-width:1.0;"/>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="75" x="380" y="254.3949">renew query</text>
+    </g>
+    <!--link assigned to declined-->
+    <g id="link_assigned_declined">
+      <path d="M268.22,269.0179 C243.65,286.3679 210,314.3379 192,347.5379 C172.82,382.9179 168.88,430.4079 168.46,459.0679 " fill="none" id="assigned-to-declined" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="168.43,463.7179,172.4814,454.7409,168.4586,458.718,164.4815,454.6952,168.43,463.7179" style="stroke:#181818;stroke-width:1.0;"/>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="80" x="193" y="372.4649">decline query</text>
+    </g>
+    <!--link declined to declined_expired-->
+    <g id="link_declined_declined_expired">
+      <path d="M156.82,504.7479 C151.16,513.6679 144.49,524.5779 139,534.6679 C131.42,548.6079 123.78,564.6379 117.87,577.5879 " fill="none" id="declined-to-declined_expired" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="115.9,581.9179,123.2734,575.3886,117.9744,577.3685,115.9944,572.0695,115.9,581.9179" style="stroke:#181818;stroke-width:1.0;"/>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="133" x="140" y="549.5649">after probation period</text>
+    </g>
+    <!--reverse link assigned to declined_expired-->
+    <g id="link_assigned_declined_expired">
+      <path d="M251.01,269.6579 C235.72,277.3479 219.28,287.0879 206,298.5379 C158.17,339.7579 153.15,359.1379 127,416.6079 C101.37,472.9479 102.85,548.5379 105.26,583.2879 " fill="none" id="assigned-backto-declined_expired" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="255.22,267.5879,245.3791,267.9849,250.7365,269.8011,248.9203,275.1585,255.22,267.5879" style="stroke:#181818;stroke-width:1.0;"/>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="33" x="128" y="431.5049">reuse</text>
+    </g>
+    <!--link assigned_expired to reclaimed-->
+    <g id="link_assigned_expired_reclaimed">
+      <path d="M417.58,386.9979 C404.31,443.8679 364.78,613.2479 349.82,677.3379 " fill="none" id="assigned_expired-to-reclaimed" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="348.71,682.0779,354.638,674.2129,349.8385,677.2069,346.8445,672.4074,348.71,682.0779" style="stroke:#181818;stroke-width:1.0;"/>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="43" x="384" y="549.5649">reclaim</text>
+    </g>
+    <!--link declined_expired to free-->
+    <g id="link_declined_expired_free">
+      <path d="M74.77,583.3279 C45.21,563.3179 6,528.7479 6,486.1379 C6,157.9679 6,157.9679 6,157.9679 C6,46.0679 142.63,126.1379 248,88.4679 C252.01,87.0379 256.18,85.4079 260.28,83.7379 " fill="none" id="declined_expired-to-free" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="264.81,81.8479,254.9636,81.628,260.1967,83.7761,258.0486,89.0092,264.81,81.8479" style="stroke:#181818;stroke-width:1.0;"/>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="46" x="7" y="313.4349">remove</text>
+    </g>
+    <!--reverse link assigned to reclaimed-->
+    <g id="link_assigned_reclaimed">
+      <path d="M298.47,275.3379 C299.06,309.3879 300,371.8079 300,425.1079 C300,425.1079 300,425.1079 300,604.2079 C300,633.8779 316.97,664.5179 329.84,683.4879 " fill="none" id="assigned-backto-reclaimed" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="298.38,270.4279,294.5349,279.4952,298.4657,275.4272,302.5337,279.358,298.38,270.4279" style="stroke:#181818;stroke-width:1.0;"/>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="33" x="301" y="490.5349">reuse</text>
+    </g>
+    <!--reverse link free to reclaimed-->
+    <g id="link_free_reclaimed">
+      <path d="M321.67,73.3179 C392.62,81.9779 562,107.9079 562,157.9679 C562,157.9679 562,157.9679 562,604.2079 C562,669.1579 480.53,691.3479 417.2,698.7779 " fill="none" id="free-backto-reclaimed" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="317.03,72.7579,325.4985,77.7863,321.9955,73.3446,326.4372,69.8416,317.03,72.7579" style="stroke:#181818;stroke-width:1.0;"/>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="46" x="563" y="372.4649">remove</text>
+    </g>
+    <!--link declined_expired to reclaimed-->
+    <!--SRC=[TP6nJiGm343tV8Lr4mmzmOOOa93W5ZPMX52Ek7UMsgGaxW5_ZzCskPRqDZjvVhOJ9cuG6jG18R1c373rWXfkjtVRcskbz04jmsRd4JUW0zGIAEiurjGCzo0na0K-9elHhFSIvDh74EXWqGprUagAMy2VZlm_wcCwpFGJVZQKN6PAYjk5Ar65wtdCgrS1DBKJxbEcLDmLggfwoFF8lcFOYa54wNY6f3OHhHazd7H31XggaKMxMYEiHulVyDMZ_vqXiNUQNw0fBB2-4swODeh6RnWPbQldgcB6phkzPd8MElJap7crZ8vD5XFtyic5yWAt8emJvTSUm25UKLRpzLft4jsvy4B39L0AoYvlHp86xVjyBFK7]-->
+  </g>
+</svg>

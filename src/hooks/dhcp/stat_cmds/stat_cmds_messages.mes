@@ -1,0 +1,77 @@
+# Copyright (C) 2018-2025 Internet Systems Consortium, Inc. ("ISC")
+#
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+% STAT_CMDS_DEINIT_OK unloading Stat Commands hooks library successful
+This info message indicates that the Stat Commands hooks library has been
+removed successfully.
+
+% STAT_CMDS_INIT_OK loading Stat Commands hooks library successful
+This info message indicates that the Stat Commands hooks library has been
+loaded successfully. Enjoy!
+
+% STAT_CMDS_LEASE4_FAILED stat-lease4-get command failed: reason: %1
+The stat-lease4-get command has failed. The reason for failure is logged.
+
+% STAT_CMDS_LEASE4_GET stat-lease4-get command successful, parameters: %1 rows found: %2
+The stat-lease4-get command has been successful. The log will contain
+the parameters supplied and the number of rows found.
+
+% STAT_CMDS_LEASE4_GET_FAILED stat-lease4-get command failed: parameters: %1, reason: %2
+The stat-lease4-get command has failed. Both the parameters supplied and
+the reason for failure are logged.
+
+% STAT_CMDS_LEASE4_GET_INVALID stat-lease4-get command is malformed or invalid, reason: %1
+The stat-lease4-get command was either malformed or contained invalid
+parameters.  A detailed explanation should be logged.
+
+% STAT_CMDS_LEASE4_GET_NO_SUBNETS stat-lease4-get, parameters: %1, %2"
+The parameters submitted with stat-lease4-get were valid but excluded all
+known subnets.  The parameters supplied along with an explanation should
+be logged.
+
+% STAT_CMDS_LEASE4_ORPHANED_STATS stat-lease4-get command omitted statistics for one or more non-existent subnets
+Logged at debug log level 40.
+During processing the stat-lease4-get found statistics for subnet IDs for
+non-existent subnets. These values were omitted from the command response
+returned to the user. This may occur when subnets have been removed from
+the configuration in a manner that did not also remove the statistics. While
+the existence of such statistics is not harmful, steps should be considered
+to remove them.  For memfile lease storage, the problem should disappear
+upon configuration reload or server restart. For database lease storage the
+issue is more complicated and as of Kea 2.0.0 we do not yet have a clean
+solution.
+
+% STAT_CMDS_LEASE6_FAILED stat-lease6-get command failed: reason: %1
+The stat-lease6-get command has failed. The reason for failure is logged.
+
+% STAT_CMDS_LEASE6_GET stat-lease6-get command successful, parameters: %1 rows found: %2
+The stat-lease6-get command has been successful. The log will contain
+the parameters supplied and the number of rows found.
+
+% STAT_CMDS_LEASE6_GET_FAILED stat-lease6-get command failed: parameters: %1, reason: %2
+The stat-lease6-get command has failed. Both the parameters supplied and
+the reason for failure are logged.
+
+% STAT_CMDS_LEASE6_GET_INVALID stat-lease6-get command is malformed or invalid, reason: %1
+The stat-lease6-get command was either malformed or contained invalid
+parameters.  A detailed explanation should be logged.
+
+% STAT_CMDS_LEASE6_GET_NO_SUBNETS stat-lease6-get, parameters: %1, %2"
+The parameters submitted with stat-lease6-get were valid but excluded all
+known subnets.  The parameters supplied along with an explanation should
+be logged.
+
+% STAT_CMDS_LEASE6_ORPHANED_STATS stat-lease6-get command omitted statistics for one or more non-existent subnets
+Logged at debug log level 40.
+During processing the stat-lease4-get found statistics for subnet IDs for
+non-existent subnets. These values were omitted from the command response
+returned to the user. This may occur when subnets have been removed from
+the configuration in a manner that did not also remove the statistics. While
+the existence of such statistics is not harmful, steps should be considered
+to remove them.  For memfile lease storage, the problem should disappear
+upon configuration reload or server restart. For database lease storage the
+issue is more complicated and as of Kea 2.0.0 we do not yet have a clean
+solution.

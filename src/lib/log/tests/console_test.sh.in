@@ -1,0 +1,54 @@
+#!/bin/sh
+
+# Copyright (C) 2011-2025 Internet Systems Consortium, Inc. ("ISC")
+#
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+# The logger supports the idea of a "console" logger than logs to either stdout
+# or stderr.  This test checks that both these options work.
+
+# Exit with error if commands exit with non-zero and if undefined variables are
+# used.
+set -eu
+
+# Include common test library.
+# shellcheck disable=SC1091
+# SC1091: Not following: ... was not specified as input (see shellcheck -x).
+. "@abs_top_builddir@/src/lib/testutils/dhcp_test_lib.sh"
+
+tempfile="@abs_builddir@/console_test_tempfile_$$"
+
+# Look at tempfile and check that the count equals the expected count
+passfail() {
+    count=$(wc -l $tempfile | awk '{print $1}')
+    if [ "${count}" -eq "${1}" ]; then
+        test_finish 0
+    else
+        test_finish 1
+    fi
+}
+
+test_start 'console-output.stdout'
+rm -f $tempfile
+./logger_example -c stdout -s error 1> $tempfile 2> /dev/null
+passfail 4
+
+test_start 'console-output.stdout-not-stderr'
+rm -f $tempfile
+./logger_example -c stdout -s error 1> /dev/null 2> $tempfile
+passfail 0
+
+test_start 'console-output.stderr'
+rm -f $tempfile
+./logger_example -c stderr -s error 1> /dev/null 2> $tempfile
+passfail 4
+
+test_start 'console-output.stderr-not-stdout'
+rm -f $tempfile
+./logger_example -c stderr -s error 1> $tempfile 2> /dev/null
+passfail 0
+
+# Tidy up
+rm -f $tempfile

@@ -1,0 +1,355 @@
+<?xml version="1.0" encoding="us-ascii" standalone="no"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" contentStyleType="text/css" height="1930px" preserveAspectRatio="none" style="width:1791px;height:1930px;background:#FFFFFF;" version="1.1" viewBox="0 0 1791 1930" width="1791px" zoomAndPan="magnify">
+  <defs/>
+  <g>
+    <text fill="#000000" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacing" textLength="260" x="758.5" y="24.9659">DHCPv4 packet processing (Kea 1.8.0)</text>
+    <!--cluster process-->
+    <g id="cluster_process">
+      <rect fill="none" height="109.06" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:1.0;" width="842" x="680" y="975.6179"/>
+      <text fill="#000000" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacing" textLength="243" x="979.5" y="992.5839">Process Query on its Message Type</text>
+    </g>
+    <!--entity processDiscover-->
+    <g id="elem_processDiscover">
+      <rect fill="#F1F1F1" height="39.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="132" x="1050" y="1021.6179"/>
+      <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="112" x="1060" y="1046.5839">Process Discover</text>
+    </g>
+    <!--entity processRequest-->
+    <g id="elem_processRequest">
+      <rect fill="#F1F1F1" height="39.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="130" x="723" y="1021.6179"/>
+      <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="110" x="733" y="1046.5839">Process Request</text>
+    </g>
+    <!--entity processRelease-->
+    <g id="elem_processRelease">
+      <rect fill="#F1F1F1" height="39.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="127" x="888.5" y="1021.6179"/>
+      <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="107" x="898.5" y="1046.5839">Process Release</text>
+    </g>
+    <!--entity processDecline-->
+    <g id="elem_processDecline">
+      <rect fill="#F1F1F1" height="39.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="125" x="1216.5" y="1021.6179"/>
+      <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="105" x="1226.5" y="1046.5839">Process Decline</text>
+    </g>
+    <!--entity processInform-->
+    <g id="elem_processInform">
+      <rect fill="#F1F1F1" height="39.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="121" x="1376.5" y="1021.6179"/>
+      <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="101" x="1386.5" y="1046.5839">Process Inform</text>
+    </g>
+    <!--entity receivePacket-->
+    <g id="elem_receivePacket">
+      <rect fill="#F1F1F1" height="39.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="114" x="1505" y="47.0679"/>
+      <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="94" x="1515" y="72.0339">Receive query</text>
+    </g>
+    <g id="elem_GMN3">
+      <path d="M1417.5,52.7479 L1417.5,80.4539 A0,0 0 0 0 1417.5,80.4539 L1470.5,80.4539 A0,0 0 0 0 1470.5,80.4539 L1470.5,70.7479 L1504.6,66.6079 L1470.5,62.7479 L1470.5,62.7479 L1460.5,52.7479 L1417.5,52.7479 A0,0 0 0 0 1417.5,52.7479 " fill="#FEFFDD" style="stroke:#181818;stroke-width:0.5;"/>
+      <path d="M1460.5,52.7479 L1460.5,62.7479 L1470.5,62.7479 L1460.5,52.7479 " fill="#FEFFDD" style="stroke:#181818;stroke-width:0.5;"/>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="32" x="1423.5" y="71.6449">input</text>
+    </g>
+    <!--entity isServiceEnabled-->
+    <g id="elem_isServiceEnabled">
+      <rect fill="#F1F1F1" height="39.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="127" x="1498.5" y="147.1379"/>
+      <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="107" x="1508.5" y="172.1039">Service Enabled</text>
+    </g>
+    <!--entity buffer4_receive-->
+    <g id="elem_buffer4_receive">
+      <rect fill="#F1F1F1" height="39.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="175" x="974.5" y="265.2079"/>
+      <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="155" x="984.5" y="290.1739">Callout buffer4_receive</text>
+    </g>
+    <g id="elem_GMN8">
+      <path d="M1185,270.8879 L1185,280.7379 L1149.89,284.7379 L1185,288.7379 L1185,298.5939 A0,0 0 0 0 1185,298.5939 L1237,298.5939 A0,0 0 0 0 1237,298.5939 L1237,280.8879 L1227,270.8879 L1185,270.8879 A0,0 0 0 0 1185,270.8879 " fill="#FEFFDD" style="stroke:#181818;stroke-width:0.5;"/>
+      <path d="M1227,270.8879 L1227,280.8879 L1237,280.8879 L1227,270.8879 " fill="#FEFFDD" style="stroke:#181818;stroke-width:0.5;"/>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="31" x="1191" y="289.7849">hook</text>
+    </g>
+    <!--entity unpack-->
+    <g id="elem_unpack">
+      <rect fill="#F1F1F1" height="39.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="113" x="630.5" y="383.2779"/>
+      <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="93" x="640.5" y="408.2439">Unpack query</text>
+    </g>
+    <!--entity classify-->
+    <g id="elem_classify">
+      <rect fill="#F1F1F1" height="39.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="114" x="630" y="483.3379"/>
+      <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="94" x="640" y="508.3039">Classify query</text>
+    </g>
+    <!--entity pkt4_receive-->
+    <g id="elem_pkt4_receive">
+      <rect fill="#F1F1F1" height="39.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="154" x="459" y="583.4079"/>
+      <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="134" x="469" y="608.3739">Callout pkt4_receive</text>
+    </g>
+    <g id="elem_GMN14">
+      <path d="M648,589.0879 L648,598.9479 L613.36,602.9479 L648,606.9479 L648,616.7939 A0,0 0 0 0 648,616.7939 L700,616.7939 A0,0 0 0 0 700,616.7939 L700,599.0879 L690,589.0879 L648,589.0879 A0,0 0 0 0 648,589.0879 " fill="#FEFFDD" style="stroke:#181818;stroke-width:0.5;"/>
+      <path d="M690,589.0879 L690,599.0879 L700,599.0879 L690,589.0879 " fill="#FEFFDD" style="stroke:#181818;stroke-width:0.5;"/>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="31" x="654" y="607.9849">hook</text>
+    </g>
+    <!--entity drop_class-->
+    <g id="elem_drop_class">
+      <rect fill="#F1F1F1" height="39.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="139" x="245.5" y="701.4779"/>
+      <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="119" x="255.5" y="726.4439">Check DROP class</text>
+    </g>
+    <!--entity same_client-->
+    <g id="elem_same_client">
+      <rect fill="#F1F1F1" height="39.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="336" x="147" y="801.5479"/>
+      <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="316" x="157" y="826.5139">Avoid same client race in multi-threaded mode</text>
+    </g>
+    <g id="elem_GMN19">
+      <path d="M588.5,807.2279 L588.5,817.0779 L483.47,821.0779 L588.5,825.0779 L588.5,834.9339 A0,0 0 0 0 588.5,834.9339 L783.5,834.9339 A0,0 0 0 0 783.5,834.9339 L783.5,817.2279 L773.5,807.2279 L588.5,807.2279 A0,0 0 0 0 588.5,807.2279 " fill="#FEFFDD" style="stroke:#181818;stroke-width:0.5;"/>
+      <path d="M773.5,807.2279 L773.5,817.2279 L783.5,817.2279 L773.5,807.2279 " fill="#FEFFDD" style="stroke:#181818;stroke-width:0.5;"/>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="174" x="594.5" y="826.1249">postpone processing or drop</text>
+    </g>
+    <!--entity leases4_committed-->
+    <g id="elem_leases4_committed">
+      <rect fill="#F1F1F1" height="39.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="199" x="991.5" y="1157.6779"/>
+      <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="179" x="1001.5" y="1182.6439">Callout leases4_committed</text>
+    </g>
+    <g id="elem_GMN29">
+      <path d="M1225,1163.3679 L1225,1173.2179 L1191,1177.2179 L1225,1181.2179 L1225,1191.0739 A0,0 0 0 0 1225,1191.0739 L1277,1191.0739 A0,0 0 0 0 1277,1191.0739 L1277,1173.3679 L1267,1163.3679 L1225,1163.3679 A0,0 0 0 0 1225,1163.3679 " fill="#FEFFDD" style="stroke:#181818;stroke-width:0.5;"/>
+      <path d="M1267,1163.3679 L1267,1173.3679 L1277,1173.3679 L1267,1163.3679 " fill="#FEFFDD" style="stroke:#181818;stroke-width:0.5;"/>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="31" x="1231" y="1182.2649">hook</text>
+    </g>
+    <!--entity park-->
+    <g id="elem_park">
+      <rect fill="#F1F1F1" height="39.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="49" x="1130.5" y="1275.7479"/>
+      <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="29" x="1140.5" y="1300.7139">Park</text>
+    </g>
+    <!--entity pkt4_send-->
+    <g id="elem_pkt4_send">
+      <rect fill="#F1F1F1" height="39.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="139" x="991.5" y="1393.8179"/>
+      <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="119" x="1001.5" y="1418.7839">Callout pkt4_send</text>
+    </g>
+    <!--entity send-->
+    <g id="elem_send">
+      <rect fill="#F1F1F1" height="39.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="120" x="1000" y="1730.0179"/>
+      <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="100" x="1010" y="1754.9839">Send response</text>
+    </g>
+    <!--entity pack-->
+    <g id="elem_pack">
+      <rect fill="#F1F1F1" height="39.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="116" x="1003" y="1511.8879"/>
+      <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="96" x="1013" y="1536.8539">Pack response</text>
+    </g>
+    <!--entity buffer4_send-->
+    <g id="elem_buffer4_send">
+      <rect fill="#F1F1F1" height="39.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="160" x="953" y="1611.9579"/>
+      <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="140" x="963" y="1636.9239">Callout buffer4_send</text>
+    </g>
+    <g id="elem_GMN37">
+      <path d="M855.5,1617.6379 L855.5,1645.3439 A0,0 0 0 0 855.5,1645.3439 L918.5,1645.3439 A0,0 0 0 0 918.5,1645.3439 L918.5,1635.6379 L952.8,1631.4879 L918.5,1627.6379 L918.5,1627.6379 L908.5,1617.6379 L855.5,1617.6379 A0,0 0 0 0 855.5,1617.6379 " fill="#FEFFDD" style="stroke:#181818;stroke-width:0.5;"/>
+      <path d="M908.5,1617.6379 L908.5,1627.6379 L918.5,1627.6379 L908.5,1617.6379 " fill="#FEFFDD" style="stroke:#181818;stroke-width:0.5;"/>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="42" x="861.5" y="1636.5349">output</text>
+    </g>
+    <!--entity drop-->
+    <g id="elem_drop">
+      <rect fill="#F1F1F1" height="39.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="101" x="920.5" y="1830.0879"/>
+      <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="81" x="930.5" y="1855.0539">Drop packet</text>
+    </g>
+    <g id="elem_GMN41">
+      <path d="M834.5,1835.7679 L834.5,1863.4739 A0,0 0 0 0 834.5,1863.4739 L885.5,1863.4739 A0,0 0 0 0 885.5,1863.4739 L885.5,1853.7679 L920.28,1849.6279 L885.5,1845.7679 L885.5,1845.7679 L875.5,1835.7679 L834.5,1835.7679 A0,0 0 0 0 834.5,1835.7679 " fill="#FEFFDD" style="stroke:#181818;stroke-width:0.5;"/>
+      <path d="M875.5,1835.7679 L875.5,1845.7679 L885.5,1845.7679 L875.5,1835.7679 " fill="#FEFFDD" style="stroke:#181818;stroke-width:0.5;"/>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="30" x="840.5" y="1854.6649">error</text>
+    </g>
+    <!--link receivePacket to isServiceEnabled-->
+    <g id="link_receivePacket_isServiceEnabled">
+      <path d="M1562,86.5179 C1562,101.8479 1562,123.5879 1562,140.4079 " fill="none" id="receivePacket-to-isServiceEnabled" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="1562,145.3079,1566,136.3079,1562,140.3079,1558,136.3079,1562,145.3079" style="stroke:#181818;stroke-width:1.0;"/>
+    </g>
+    <!--link isServiceEnabled to buffer4_receive-->
+    <g id="link_isServiceEnabled_buffer4_receive">
+      <path d="M1498.17,182.4879 C1409.72,203.0279 1249.54,240.2079 1149.86,263.3479 " fill="none" id="isServiceEnabled-to-buffer4_receive" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="1145.15,264.4379,1154.8218,266.2972,1150.0203,263.3063,1153.0112,258.5048,1145.15,264.4379" style="stroke:#181818;stroke-width:1.0;"/>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="104" x="1342" y="231.1049">service is enabled</text>
+    </g>
+    <!--link isServiceEnabled to drop-->
+    <g id="link_isServiceEnabled_drop">
+      <path d="M1600.28,186.6079 C1633.4,206.0079 1676,239.5379 1676,283.7379 C1676,283.7379 1676,283.7379 1676,1750.5579 C1676,1815.7879 1196.34,1840.1279 1028.31,1846.6579 " fill="none" id="isServiceEnabled-to-drop" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="1023.5,1846.8379,1032.6423,1850.5011,1028.4966,1846.6523,1032.3453,1842.5066,1023.5,1846.8379" style="stroke:#181818;stroke-width:1.0;"/>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="106" x="1677" y="947.5149">service is disabled</text>
+    </g>
+    <!--link buffer4_receive to unpack-->
+    <g id="link_buffer4_receive_unpack">
+      <path d="M1000.92,304.6479 C931.81,326.0379 819.84,360.6979 749.97,382.3179 " fill="none" id="buffer4_receive-to-unpack" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="745.2,383.7979,754.9823,384.9414,749.9739,382.3114,752.6039,377.3031,745.2,383.7979" style="stroke:#181818;stroke-width:1.0;"/>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="66" x="897" y="349.1749">CONTINUE</text>
+    </g>
+    <!--link buffer4_receive to classify-->
+    <g id="link_buffer4_receive_classify">
+      <path d="M1039.06,304.5979 C1021.3,318.7879 995.8,338.2779 972,353.2779 C891.44,404.0279 791.65,453.1479 734.06,480.2579 " fill="none" id="buffer4_receive-to-classify" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="729.65,482.3279,739.4967,482.1195,734.1751,480.201,736.0936,474.8794,729.65,482.3279" style="stroke:#181818;stroke-width:1.0;"/>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="27" x="922" y="408.2049">SKIP</text>
+    </g>
+    <!--link buffer4_receive to drop-->
+    <g id="link_buffer4_receive_drop">
+      <path d="M1149.71,302.9379 C1298.88,332.4779 1586,390.7779 1586,401.8079 C1586,401.8079 1586,401.8079 1586,1750.5579 C1586,1806.7379 1180.52,1836.3379 1028.04,1845.4879 " fill="none" id="buffer4_receive-to-drop" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="1023.36,1845.7679,1032.5834,1849.2217,1028.351,1845.4685,1032.1043,1841.2361,1023.36,1845.7679" style="stroke:#181818;stroke-width:1.0;"/>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="35" x="1587" y="1046.5449">DROP</text>
+    </g>
+    <!--link unpack to classify-->
+    <g id="link_unpack_classify">
+      <path d="M687,422.7179 C687,438.0479 687,459.7979 687,476.6179 " fill="none" id="unpack-to-classify" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="687,481.5079,691,472.5079,687,476.5079,683,472.5079,687,481.5079" style="stroke:#181818;stroke-width:1.0;"/>
+    </g>
+    <!--link unpack to drop-->
+    <g id="link_unpack_drop">
+      <path d="M630.11,406.0479 C466.44,413.2279 6,439.0179 6,501.8779 C6,501.8779 6,501.8779 6,1750.5579 C6,1796.6079 52.59,1787.9079 97,1800.0879 C269.84,1847.5279 725.82,1803.0179 903,1830.0879 C906.56,1830.6379 910.21,1831.2979 913.87,1832.0479 " fill="none" id="unpack-to-drop" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="918.55,1833.0679,910.6157,1827.2329,913.6661,1831.9969,908.9021,1835.0472,918.55,1833.0679" style="stroke:#181818;stroke-width:1.0;"/>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="49" x="7" y="1123.5749">on error</text>
+    </g>
+    <!--link classify to pkt4_receive-->
+    <g id="link_classify_pkt4_receive">
+      <path d="M657.89,522.7879 C632.9,539.0179 596.84,562.4279 570.43,579.5879 " fill="none" id="classify-to-pkt4_receive" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="566.55,582.0979,576.2763,580.5491,570.7429,579.374,571.918,573.8405,566.55,582.0979" style="stroke:#181818;stroke-width:1.0;"/>
+    </g>
+    <!--link pkt4_receive to drop_class-->
+    <g id="link_pkt4_receive_drop_class">
+      <path d="M498.89,622.9779 C481.58,631.8879 460.71,642.6779 442,652.4779 C413.11,667.6179 380.64,684.8879 355.76,698.1779 " fill="none" id="pkt4_receive-to-drop_class" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="351.58,700.4079,361.4032,699.6971,355.9906,698.0528,357.6349,692.6402,351.58,700.4079" style="stroke:#181818;stroke-width:1.0;"/>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="66" x="443" y="667.3749">CONTINUE</text>
+    </g>
+    <!--link pkt4_receive to drop-->
+    <g id="link_pkt4_receive_drop">
+      <path d="M536,622.8379 C536,645.8179 536,685.7579 536,720.0079 C536,720.0079 536,720.0079 536,1750.5579 C536,1860.5579 649.96,1782.9379 903,1830.0879 C906.62,1830.7679 910.33,1831.5379 914.06,1832.3779 " fill="none" id="pkt4_receive-to-drop" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="918.87,1833.4979,911.005,1827.5699,913.999,1832.3694,909.1994,1835.3635,918.87,1833.4979" style="stroke:#181818;stroke-width:1.0;"/>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="35" x="537" y="1241.6449">DROP</text>
+    </g>
+    <!--link drop_class to same_client-->
+    <g id="link_drop_class_same_client">
+      <path d="M315,740.9179 C315,756.2479 315,777.9979 315,794.8179 " fill="none" id="drop_class-to-same_client" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="315,799.7179,319,790.7179,315,794.7179,311,790.7179,315,799.7179" style="stroke:#181818;stroke-width:1.0;"/>
+    </g>
+    <!--link drop_class to drop-->
+    <g id="link_drop_class_drop">
+      <path d="M245.07,724.7079 C180.33,731.3979 94,752.9179 94,820.0779 C94,820.0779 94,820.0779 94,1750.5579 C94,1903.2579 282.12,1784.1979 434,1800.0879 C641.74,1821.8279 696.97,1795.7879 903,1830.0879 C906.56,1830.6779 910.2,1831.3879 913.85,1832.1579 " fill="none" id="drop_class-to-drop" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="918.53,1833.2079,910.612,1827.3508,913.6491,1832.1233,908.8766,1835.1603,918.53,1833.2079" style="stroke:#181818;stroke-width:1.0;"/>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="118" x="95" y="1300.6849">query in DROP class</text>
+    </g>
+    <!--link same_client to process-->
+    <g id="link_same_client_process">
+      <path d="M347.45,841.0479 C392.47,867.3679 476.635,916.5729 550.025,959.4792 C586.72,980.9323 620.7213,1000.8107 645.7888,1015.4665 C658.3225,1022.7944 668.6228,1028.8166 675.9097,1033.0772 C676.8205,1033.6098 677.6843,1034.1148 678.4995,1034.5914 C678.9071,1034.8298 679.3025,1035.061 679.6856,1035.285 " fill="none" id="same_client-to-process" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="679.6856,1035.285,673.9353,1027.2891,675.3693,1032.7612,669.8972,1034.1952,679.6856,1035.285" style="stroke:#181818;stroke-width:1.0;"/>
+    </g>
+    <!--link same_client to drop-->
+    <g id="link_same_client_drop">
+      <path d="M295.48,841.0979 C282.19,856.1279 267,878.3879 267,901.6179 C267,901.6179 267,901.6179 267,1237.2479 C267,1293.6179 257.26,1307.4779 259,1363.8179 C259.67,1385.4179 262,1390.7379 262,1412.3479 C262,1412.3479 262,1412.3479 262,1750.5579 C262,1862.9579 398.65,1784.7779 510,1800.0879 C683.54,1823.9579 730.38,1800.2579 903,1830.0879 C906.63,1830.7179 910.35,1831.4579 914.08,1832.2679 " fill="none" id="same_client-to-drop" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="918.89,1833.3579,910.9884,1827.4788,914.0121,1832.2597,909.2312,1835.2834,918.89,1833.3579" style="stroke:#181818;stroke-width:1.0;"/>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="249" x="260" y="1359.7149">queries from the same client possible race</text>
+    </g>
+    <!--link process to drop-->
+    <g id="link_process_drop">
+      <path d="M679.8577,1049.157 C679.7594,1049.2455 679.6604,1049.3349 679.5607,1049.4249 C677.9649,1050.8664 676.1853,1052.5069 674.2595,1054.3326 C666.5566,1061.6354 656.5156,1071.9017 646.5513,1084.2479 C626.6225,1108.9404 607,1141.9529 607,1176.2179 C607,1176.2179 607,1176.2179 607,1355.3179 C607,1455.5979 607,1480.6679 607,1580.9579 C607,1580.9579 607,1580.9579 607,1750.5579 C607,1886.7779 771.51,1794.5079 903,1830.0879 C906.56,1831.0479 910.22,1832.0479 913.91,1833.0479 " fill="none" id="process-to-drop" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="918.67,1834.3379,911.0365,1828.1146,913.8455,1833.0247,908.9354,1835.8338,918.67,1834.3379" style="stroke:#181818;stroke-width:1.0;"/>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="143" x="608" y="1477.7849">unknown message type</text>
+    </g>
+    <!--link processDiscover to leases4_committed-->
+    <g id="link_processDiscover_leases4_committed">
+      <path d="M1112.47,1061.0679 C1108.08,1084.6279 1100.56,1124.9379 1095.69,1151.0679 " fill="none" id="processDiscover-to-leases4_committed" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="1094.79,1155.8979,1100.3645,1147.7785,1095.702,1150.9818,1092.4987,1146.3193,1094.79,1155.8979" style="stroke:#181818;stroke-width:1.0;"/>
+    </g>
+    <!--link processDiscover to drop-->
+    <g id="link_processDiscover_drop">
+      <path d="M1141.38,1060.9579 C1157.61,1072.7479 1179.24,1088.0579 1199,1100.6779 C1255.63,1136.8679 1330,1109.0079 1330,1176.2179 C1330,1176.2179 1330,1176.2179 1330,1414.3479 C1330,1435.9679 1327.67,1441.2879 1327,1462.8879 C1326.74,1471.3279 1326.04,1473.4979 1327,1481.8879 C1332.14,1526.7979 1350,1535.7579 1350,1580.9579 C1350,1580.9579 1350,1580.9579 1350,1750.5579 C1350,1816.2779 1133.7,1838.6679 1027.91,1845.6879 " fill="none" id="processDiscover-to-drop" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="1023.23,1845.9879,1032.4632,1849.4154,1028.2202,1845.6743,1031.9613,1841.4312,1023.23,1845.9879" style="stroke:#181818;stroke-width:1.0;"/>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="49" x="1328" y="1477.7849">on error</text>
+    </g>
+    <!--link processRequest to leases4_committed-->
+    <g id="link_processRequest_leases4_committed">
+      <path d="M810.84,1060.9379 C826.91,1073.4679 849.33,1089.6079 871,1100.6779 C916.25,1123.8079 970.17,1142.4479 1013.3,1155.4279 " fill="none" id="processRequest-to-leases4_committed" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="1017.86,1156.7879,1010.3749,1150.3868,1013.0677,1155.3616,1008.0929,1158.0544,1017.86,1156.7879" style="stroke:#181818;stroke-width:1.0;"/>
+    </g>
+    <!--link processRequest to drop-->
+    <g id="link_processRequest_drop">
+      <path d="M785.96,1060.7779 C783.3,1086.6379 779,1134.9279 779,1176.2179 C779,1176.2179 779,1176.2179 779,1414.3479 C779,1576.7879 769.86,1638.8979 867,1769.0879 C884.42,1792.4379 910.46,1812.3379 932.12,1826.3879 " fill="none" id="processRequest-to-drop" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="936.25,1829.0279,930.8099,1820.8178,932.0335,1826.3408,926.5105,1827.5643,936.25,1829.0279" style="stroke:#181818;stroke-width:1.0;"/>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="49" x="779" y="1477.7849">on error</text>
+    </g>
+    <!--link processRelease to leases4_committed-->
+    <g id="link_processRelease_leases4_committed">
+      <path d="M971.62,1061.0679 C996.66,1085.2279 1039.97,1126.9979 1066.96,1153.0379 " fill="none" id="processRelease-to-leases4_committed" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="1070.39,1156.3379,1066.6879,1147.2113,1066.7908,1152.8672,1061.1349,1152.9701,1070.39,1156.3379" style="stroke:#181818;stroke-width:1.0;"/>
+    </g>
+    <!--link processRelease to drop-->
+    <g id="link_processRelease_drop">
+      <path d="M931.31,1060.8179 C907.02,1084.8979 870,1129.2879 870,1176.2179 C870,1176.2179 870,1176.2179 870,1414.3479 C870,1520.4979 807.02,1549.4979 838,1651.0179 C859.66,1721.9979 916.3,1790.5579 948.24,1825.2179 " fill="none" id="processRelease-to-drop" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="951.36,1828.5679,948.1796,1819.2467,947.9627,1824.8994,942.31,1824.6824,951.36,1828.5679" style="stroke:#181818;stroke-width:1.0;"/>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="49" x="866" y="1477.7849">on error</text>
+    </g>
+    <!--link processDecline to leases4_committed-->
+    <g id="link_processDecline_leases4_committed">
+      <path d="M1253.52,1061.0079 C1237.85,1072.5479 1217.34,1087.5679 1199,1100.6779 C1173.78,1118.7279 1145,1138.8279 1123.49,1153.7579 " fill="none" id="processDecline-to-leases4_committed" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="1119.43,1156.5779,1129.1039,1154.7298,1123.5368,1153.7259,1124.5407,1148.1589,1119.43,1156.5779" style="stroke:#181818;stroke-width:1.0;"/>
+    </g>
+    <!--link processDecline to drop-->
+    <g id="link_processDecline_drop">
+      <path d="M1302.45,1061.0779 C1342.78,1094.0579 1421,1160.1079 1421,1176.2179 C1421,1176.2179 1421,1176.2179 1421,1750.5579 C1421,1830.0879 1149.24,1845.2379 1028.1,1848.0379 " fill="none" id="processDecline-to-drop" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="1023.26,1848.1379,1032.3491,1851.9312,1028.2587,1848.0237,1032.1662,1843.9333,1023.26,1848.1379" style="stroke:#181818;stroke-width:1.0;"/>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="49" x="1422" y="1477.7849">on error</text>
+    </g>
+    <!--link processInform to leases4_committed-->
+    <g id="link_processInform_leases4_committed">
+      <path d="M1416.23,1061.1179 C1401.28,1073.8879 1380.1,1090.2479 1359,1100.6779 C1308.2,1125.8079 1247.72,1143.7579 1197.09,1155.8379 " fill="none" id="processInform-to-leases4_committed" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="1192.44,1156.9379,1202.1169,1158.7702,1197.3071,1155.7927,1200.2846,1150.9829,1192.44,1156.9379" style="stroke:#181818;stroke-width:1.0;"/>
+    </g>
+    <!--link processInform to drop-->
+    <g id="link_processInform_drop">
+      <path d="M1455.93,1061.1579 C1478.14,1085.5879 1512,1130.3479 1512,1176.2179 C1512,1176.2179 1512,1176.2179 1512,1750.5579 C1512,1804.9879 1452.54,1785.8579 1400,1800.0879 C1270.09,1835.2779 1111.35,1844.9779 1028.14,1847.6379 " fill="none" id="processInform-to-drop" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="1023.31,1847.7879,1032.4312,1851.5032,1028.3075,1847.6309,1032.1799,1843.5072,1023.31,1847.7879" style="stroke:#181818;stroke-width:1.0;"/>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="49" x="1513" y="1477.7849">on error</text>
+    </g>
+    <!--link leases4_committed to pkt4_send-->
+    <g id="link_leases4_committed_pkt4_send">
+      <path d="M1078.99,1197.0979 C1067.68,1216.1179 1051.51,1246.6979 1045,1275.7479 C1036.36,1314.3079 1045.58,1360.0979 1053.17,1387.6579 " fill="none" id="leases4_committed-to-pkt4_send" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="1054.45,1392.1279,1055.8505,1382.3791,1053.0896,1387.3165,1048.1522,1384.5557,1054.45,1392.1279" style="stroke:#181818;stroke-width:1.0;"/>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="66" x="1046" y="1300.6849">CONTINUE</text>
+    </g>
+    <!--link leases4_committed to drop-->
+    <g id="link_leases4_committed_drop">
+      <path d="M1128.87,1197.2279 C1142.26,1205.1379 1156.76,1215.1979 1168,1226.7479 C1185.64,1244.8979 1188.99,1251.7479 1197,1275.7479 C1250.04,1434.7279 1272.49,1487.9079 1234,1651.0179 C1215.74,1728.4279 1205.78,1763.8179 1135,1800.0879 C1101.17,1817.4279 1060.16,1829.5579 1027.61,1837.3579 " fill="none" id="leases4_committed-to-drop" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="1023.11,1838.4179,1032.7857,1840.2566,1027.9778,1837.2759,1030.9585,1832.468,1023.11,1838.4179" style="stroke:#181818;stroke-width:1.0;"/>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="35" x="1254" y="1536.8149">DROP</text>
+    </g>
+    <!--link leases4_committed to park-->
+    <g id="link_leases4_committed_park">
+      <path d="M1101.43,1197.1279 C1112.35,1216.9379 1129.55,1248.1379 1141.51,1269.8179 " fill="none" id="leases4_committed-to-park" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="1143.85,1274.0579,1143.0139,1264.2446,1141.4388,1269.6777,1136.0056,1268.1026,1143.85,1274.0579" style="stroke:#181818;stroke-width:1.0;"/>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="32" x="1127" y="1241.6449">PARK</text>
+    </g>
+    <!--link park to pkt4_send-->
+    <g id="link_park_pkt4_send">
+      <path d="M1139.69,1315.1879 C1123.51,1335.1679 1097.94,1366.7379 1080.37,1388.4379 " fill="none" id="park-to-pkt4_send" style="stroke:#181818;stroke-width:1.0;stroke-dasharray:7.0,7.0;"/>
+      <polygon fill="#181818" points="1077.26,1392.2779,1086.0398,1387.8153,1080.413,1388.3973,1079.8309,1382.7705,1077.26,1392.2779" style="stroke:#181818;stroke-width:1.0;"/>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="43" x="1114" y="1359.7149">unpark</text>
+    </g>
+    <!--link pkt4_send to pack-->
+    <g id="link_pkt4_send_pack">
+      <path d="M1061,1433.2579 C1061,1452.8179 1061,1483.4779 1061,1505.1179 " fill="none" id="pkt4_send-to-pack" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="1061,1510.0079,1065,1501.0079,1061,1505.0079,1057,1501.0079,1061,1510.0079" style="stroke:#181818;stroke-width:1.0;"/>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="66" x="1062" y="1477.7849">CONTINUE</text>
+    </g>
+    <!--link pkt4_send to buffer4_send-->
+    <g id="link_pkt4_send_buffer4_send">
+      <path d="M1029.86,1433.1479 C1004.93,1450.1879 971.76,1477.8179 957,1511.8879 C941.54,1547.5879 974.65,1584.7179 1001.93,1607.7179 " fill="none" id="pkt4_send-to-buffer4_send" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="1005.77,1610.8879,1001.3586,1602.0823,1001.9079,1607.7124,996.2777,1608.2617,1005.77,1610.8879" style="stroke:#181818;stroke-width:1.0;"/>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="27" x="958" y="1536.8149">SKIP</text>
+    </g>
+    <!--link pkt4_send to drop-->
+    <g id="link_pkt4_send_drop">
+      <path d="M1106.46,1433.2979 C1118.54,1440.6679 1130.13,1450.4079 1137,1462.8879 C1202.62,1582.1179 1210.65,1654.0179 1138,1769.0879 C1114,1807.1079 1066.3,1827.3279 1028,1837.8479 " fill="none" id="pkt4_send-to-drop" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="1023.4,1839.0679,1033.1219,1840.6444,1028.2352,1837.7947,1031.0848,1832.9081,1023.4,1839.0679" style="stroke:#181818;stroke-width:1.0;"/>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="35" x="1190" y="1636.8849">DROP</text>
+    </g>
+    <!--link pack to buffer4_send-->
+    <g id="link_pack_buffer4_send">
+      <path d="M1055.6,1551.3279 C1051.19,1566.7979 1044.91,1588.7879 1040.09,1605.6679 " fill="none" id="pack-to-buffer4_send" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="1038.8,1610.1779,1045.1186,1602.6231,1040.1736,1605.3703,1037.4264,1600.4253,1038.8,1610.1779" style="stroke:#181818;stroke-width:1.0;"/>
+    </g>
+    <!--link buffer4_send to send-->
+    <g id="link_buffer4_send_send">
+      <path d="M1037.4,1651.3979 C1041.97,1671.0379 1049.14,1701.8779 1054.18,1723.5379 " fill="none" id="buffer4_send-to-send" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="1055.26,1728.1879,1057.1255,1718.5174,1054.1315,1723.3169,1049.332,1720.3229,1055.26,1728.1879" style="stroke:#181818;stroke-width:1.0;"/>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="66" x="1049" y="1695.9149">CONTINUE</text>
+    </g>
+    <!--link buffer4_send to drop-->
+    <g id="link_buffer4_send_drop">
+      <path d="M1007.81,1651.3279 C986.51,1668.9779 957.52,1697.4479 945,1730.0179 C932.96,1761.3479 945.95,1799.5979 957.5,1824.0279 " fill="none" id="buffer4_send-to-drop" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="959.57,1828.2679,959.2236,1818.4252,957.3799,1823.7731,952.0319,1821.9294,959.57,1828.2679" style="stroke:#181818;stroke-width:1.0;"/>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="35" x="946" y="1754.9549">DROP</text>
+    </g>
+    <!--link send to drop-->
+    <text fill="#888888" font-family="sans-serif" font-size="10" lengthAdjust="spacing" textLength="225" x="776" y="1919.9479">dashed arrow means asynchronous processing</text>
+    <!--SRC=[XLLDRzim3BthLn0zROSK6z33iCE08YcmebYRfUsfA0BLPc8XZkH9SefWs7yVzH5RifFq5Z- -Hr8I-MA5hH5cFwVptHKqlDYWXKQh0eqHSWsVxf33ryjlbry-CyRNA2rSBB10iKFuqwBUNm0te0Cozt8cbKMeSMNXEmZPjBPJFgBUYGBXHlAt6akl5IQY4Up8KrxNghNmrgvMgA-MiOWN3R1GKejrvMfMIcswBC_I7IhfjVL0NwNcTDBLFc4K4HfrqcnitaOAdEbXMY6rC5iyp4DkhosrQfR-i-DTxvGemV0j4ayuI7EwBI5XszPMJ6obaPTOmbQLeG77NGPkNhzHnZPAOlgMIlkYZ577biirlVl5F8JXjpizA0d26lX52BK4J_icdZEo_ZA8hHvqCs4AjKETqWxOYBn0kcHZKsw4Zb1hv0PpgeV6BI1TWCoe4HfHR-LAwMtA30ZxDtfhNyjSBGkrtGfhux2Eq3ElFkTw4qhHZ-EpP52M_I2vhsHLP4bxPUWHupLaORTgUJYVwi7kT8LIuADQwHvJidIHPpH7qIswOSxugBNIVj9wOu39vCTutOU0PmtscnAQQ1t209vMEgth9HUKmWJ5CAsZ1pyWmVJX_kds_ldcAElW2SHxlBkT7-4afTscivWt5VTOpwML2tVLLN31p5ZI3pX8WtMaRGzeWtOIZGkbnf65UfatH6S-lN6nH1QuSOt6WII9G0ChhRPWAypSZKpA27eORtFiO3Afl9KRgTx9_w8ZMN8aDh0PVvxnOevPHouzTw7pcNhIkKHU_b6Y0-bqekXW7voj8vrE50pkV9wESoJDIDJFfpE9T02FKGTJU28R6IGnvjUBE-P_JrvARYeiNmUbtFwGb_PGKEVhcqTJmpiiRyeODDZjR6QKMHA_FeEZ3mY3f05zgKHPedoDGSPMYWoJ_fFzKO7JTR_Je7Dfo57tigYqageroJyu-my0]-->
+  </g>
+</svg>

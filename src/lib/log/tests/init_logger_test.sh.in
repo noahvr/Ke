@@ -1,0 +1,96 @@
+#!/bin/sh
+
+# Copyright (C) 2011-2025 Internet Systems Consortium, Inc. ("ISC")
+#
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+# Checks that the initLogger() call uses for unit tests respects the setting of
+# the environment variables.
+
+# Exit with error if commands exit with non-zero and if undefined variables are
+# used.
+set -eu
+
+# Include common test library.
+# shellcheck disable=SC1091
+# SC1091: Not following: ... was not specified as input (see shellcheck -x).
+. "@abs_top_builddir@/src/lib/testutils/dhcp_test_lib.sh"
+
+tempfile="@abs_builddir@/init_logger_test_tempfile_$$"
+destfile_tmp="@abs_builddir@/init_logger_test_destfile_tmp_$$"
+destfile="@abs_builddir@/init_logger_test_destfile_$$"
+
+printf '1. Checking that KEA_LOGGER_SEVERITY/KEA_LOGGER_DBGLEVEL work:\n'
+
+test_start 'init-logger.severity=DEBUG,dbglevel=99'
+cat > $tempfile << .
+DEBUG [kea.log] LOG_BAD_DESTINATION unrecognized log destination: debug-0
+DEBUG [kea.log] LOG_BAD_DESTINATION unrecognized log destination: debug-50
+DEBUG [kea.log] LOG_BAD_DESTINATION unrecognized log destination: debug-99
+INFO  [kea.log] LOG_BAD_SEVERITY unrecognized log severity: info
+WARN  [kea.log] LOG_BAD_STREAM bad log console output stream: warn
+ERROR [kea.log] LOG_DUPLICATE_MESSAGE_ID duplicate message ID (error) in compiled code
+FATAL [kea.log] LOG_NO_MESSAGE_ID line fatal: message definition line found without a message ID
+.
+KEA_LOGGER_DESTINATION=stdout KEA_LOGGER_SEVERITY=DEBUG KEA_LOGGER_DBGLEVEL=99 ./init_logger_test | \
+    sed -e 's/\[\([a-z0-9\.]\{1,\}\)\/\([0-9]\{1,\}\)\.\(0x\)\{0,1\}\([0-9A-Fa-f]\{1,\}\)\]/[\1]/' | \
+    cut -d' ' -f3- | diff $tempfile -
+test_finish $?
+
+test_start 'init-logger.severity=DEBUG,dbglevel=50'
+cat > $tempfile << .
+DEBUG [kea.log] LOG_BAD_DESTINATION unrecognized log destination: debug-0
+DEBUG [kea.log] LOG_BAD_DESTINATION unrecognized log destination: debug-50
+INFO  [kea.log] LOG_BAD_SEVERITY unrecognized log severity: info
+WARN  [kea.log] LOG_BAD_STREAM bad log console output stream: warn
+ERROR [kea.log] LOG_DUPLICATE_MESSAGE_ID duplicate message ID (error) in compiled code
+FATAL [kea.log] LOG_NO_MESSAGE_ID line fatal: message definition line found without a message ID
+.
+KEA_LOGGER_DESTINATION=stdout KEA_LOGGER_SEVERITY=DEBUG KEA_LOGGER_DBGLEVEL=50 ./init_logger_test | \
+    sed -e 's/\[\([a-z0-9\.]\{1,\}\)\/\([0-9]\{1,\}\)\.\(0x\)\{0,1\}\([0-9A-Fa-f]\{1,\}\)\]/[\1]/' | \
+    cut -d' ' -f3- | diff $tempfile -
+test_finish $?
+
+test_start 'init-logger.severity=WARN'
+cat > $tempfile << .
+WARN  [kea.log] LOG_BAD_STREAM bad log console output stream: warn
+ERROR [kea.log] LOG_DUPLICATE_MESSAGE_ID duplicate message ID (error) in compiled code
+FATAL [kea.log] LOG_NO_MESSAGE_ID line fatal: message definition line found without a message ID
+.
+KEA_LOGGER_DESTINATION=stdout KEA_LOGGER_SEVERITY=WARN ./init_logger_test | \
+    sed -e 's/\[\([a-z0-9\.]\{1,\}\)\/\([0-9]\{1,\}\)\.\(0x\)\{0,1\}\([0-9A-Fa-f]\{1,\}\)\]/[\1]/' | \
+    cut -d' ' -f3- | diff $tempfile -
+test_finish $?
+
+printf '2. Checking that KEA_LOGGER_DESTINATION works:\n'
+
+test_start 'init-logger.stdout'
+cat > $tempfile << .
+FATAL [kea.log] LOG_NO_MESSAGE_ID line fatal: message definition line found without a message ID
+.
+rm -f $destfile_tmp $destfile
+KEA_LOGGER_SEVERITY=FATAL KEA_LOGGER_DESTINATION=stdout ./init_logger_test 1> $destfile_tmp
+sed -e 's/\[\([a-z0-9\.]\{1,\}\)\/\([0-9]\{1,\}\)\.\(0x\)\{0,1\}\([0-9A-Fa-f]\{1,\}\)\]/[\1]/' < $destfile_tmp > $destfile
+cut -d' ' -f3- $destfile | diff $tempfile -
+test_finish $?
+
+test_start 'init-logger.stderr'
+rm -f $destfile_tmp $destfile
+KEA_LOGGER_SEVERITY=FATAL KEA_LOGGER_DESTINATION=stderr ./init_logger_test 2> $destfile_tmp
+sed -e 's/\[\([a-z0-9\.]\{1,\}\)\/\([0-9]\{1,\}\)\.\(0x\)\{0,1\}\([0-9A-Fa-f]\{1,\}\)\]/[\1]/' < $destfile_tmp > $destfile
+cut -d' ' -f3- $destfile | diff $tempfile -
+test_finish $?
+
+test_start 'init-logger.file'
+rm -f $destfile_tmp $destfile
+KEA_LOGGER_SEVERITY=FATAL KEA_LOGGER_DESTINATION=$destfile_tmp ./init_logger_test
+sed -e 's/\[\([a-z0-9\.]\{1,\}\)\/\([0-9]\{1,\}\)\.\(0x\)\{0,1\}\([0-9A-Fa-f]\{1,\}\)\]/[\1]/' < $destfile_tmp > $destfile
+cut -d' ' -f3- $destfile | diff $tempfile -
+test_finish $?
+
+# Note: can't automatically test syslog output.
+
+# Tidy up.
+rm -f $tempfile $destfile_tmp $destfile

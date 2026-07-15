@@ -1,0 +1,373 @@
+// Copyright (C) 2012-2025 Internet Systems Consortium, Inc. ("ISC")
+//
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+/**
+  @page dhcpDatabaseBackends DHCP Database Back-Ends
+
+  All DHCP lease data is stored in some form of database, the interface
+  to this being through the Lease Manager.
+
+  All backend classes such as isc::dhcp::MySqlLeaseMgr are derived from
+  the abstract isc::dhcp::LeaseMgr class.  This provides methods to
+  create, retrieve, modify and delete leases in the database.
+
+  There are currently three available Lease Managers, Memfile, MySQL and
+  PostgreSQL:
+
+  - Memfile is an in-memory lease database which can be configured to persist
+  its content to disk in a flat-file.  Support for the Memfile database
+  backend is built into Kea DHCP.
+
+  - The MySQL lease manager uses the freely available MySQL as its backend
+  database.  This is not included in Kea DHCP by default:
+  the "-D mysql=enabled" switch must be supplied to "meson setup" for support to be
+  compiled into the software. This will also compile the "libdhcp_mysql.so" hook
+  library which must be loaded by adding it to the "hooks-libraries"
+  configuration parameter.
+
+  - The PostgreSQL lease manager uses the freely available PostgreSQL as its
+  backend database.  This is not included in Kea DHCP by default:
+  the "-D postgresql=enabled" switch must be supplied to "meson setup" for support to be
+  compiled into the software. This will also compile the "libdhcp_pgsql.so" hook
+  library which must be loaded by adding it to the "hooks-libraries"
+  configuration parameter.
+
+  @section dhcpdb-instantiation Instantiation of Lease Managers
+
+  A lease manager is instantiated through the @c LeaseMgrFactory class.  This
+  has three methods:
+
+  - isc::dhcp::LeaseMgrFactory::create - Creates a singleton Lease
+    Manager of the appropriate type.
+  - isc::dhcp::LeaseMgrFactory::instance - Returns a reference to the
+    the instance of the Lease Manager.
+  - isc::dhcp::LeaseMgrFactory::destroy - Destroys the singleton lease manager.
+
+  The selection of the Lease Manager (and thus the backend database) is
+  controlled by the connection string passed to
+  isc::dhcp::LeaseMgrFactory::create.  This is a set of "keyword=value" pairs
+  (no embedded spaces), each pair separated by a space from the others, e.g.
+
+  \code
+  type=mysql user=keatest password=1234 name=keatest host=localhost
+  \endcode
+
+  The following keywords are used for all backends:
+
+  - <b>type</b> - specifies the type of database backend.  The following values
+  for the type keyword are supported:
+     - <B>memfile</b> - In-memory database.
+     - <b>mysql</b> - Use MySQL as the database. Must be enabled at compilation
+       time.
+     - <b>postgresql</b> - Use PostgreSQL as the database. Must be enabled
+       at compilation time.
+
+  The following sections list the database-specific keywords:
+
+  @subsection dhcpdb-keywords-mysql MySQL connection string keywords
+
+  - <b>host</b> - host on which the selected database is running.  If not
+  supplied, "localhost" is assumed.
+  - <b>name</b> - name of the MySQL database to access.  There is no default -
+  this must always be supplied.
+  - <b>password</b> - password for the selected user ID (see below).  If not
+  specified, no password is used.
+  - <b>user</b> - database user ID under which the database is accessed.  If not
+    specified, no user ID is used - the database is assumed to be open.
+
+  For details, see @ref isc::db::MySqlConnection::openDatabase().
+
+  @subsection dhcpdb-keywords-pgsql PostgreSQL connection string keywords
+
+  - <b>host</b> - host on which the selected database is running.  If not
+  supplied, "localhost" is assumed.
+  - <b>name</b> - name of the PostgreSQL database to access.  There is no
+  default - this must always be supplied.
+  - <b>password</b> - password for the selected user ID (see below).  If not
+  specified, no password is used.
+  - <b>user</b> - database user ID under which the database is accessed.  If not
+    specified, no user ID is used - the database is assumed to be open.
+
+  For details, see @ref isc::db::PgSqlConnection::openDatabase().
+
+  @subsubsection infinite-valid-lifetime Infinite Valid Lifetime
+
+  The @c isc::dhcp::Lease class uses cltt (client last transmission time)
+  and valid lifetime, backend lease uses expire and valid lifetime.
+  These quantities are bound by the equation:
+  @code
+        expire = cltt + valid_lifetime
+  @endcode
+
+  But when expire is a 32 bit date and valid lifetime is the infinity
+  special value (0xffffffff) this overflows so for MySQL and PostgreSQL
+  backends this becomes:
+  @code
+        expire = cltt + valid_lifetime if valid_lifetime != 0xffffffff
+        expire = cltt if valid_lifetime == 0xffffffff
+  @endcode
+
+  @subsection memfile-description Memfile Lease Back-End
+
+  The memfile backend does not use any database, but stores leases in
+  plain CSV file instead: kea-keases4.csv for DHCPv4 and kea-leases6.csv
+  for DHCPv6. These are effectively journal files, so changes are
+  appended at the end. For example, if a single device obtains a lease,
+  renews it 3 times and then it is released, there would be 5
+  entries. Periodically, the lease file is cleaned by LFC (Lease File
+  Cleanup) process. That process does move the file to the side, then
+  creates a new file and writes cleaned entries there. Depending on the
+  situation, there may be other files, such as kea-leases4.csv.2 with .1
+  (used during LFC taking place) or .2 extensions (left over after LFC
+  is complete as "backup", i.e.  old file before clean-up).
+
+  @subsubsection lease4-csv DHCPv4 lease entry format in CSV files
+
+  - <b>address</b> - IPv4 address \n
+    type: string \n
+    example: 192.0.2.1
+
+  - <b>hwaddr</b> - hardware address (without the hardware type) \n
+    type: string \n
+    example: 00:01:02:03:04:05
+
+  - <b>client_id</b> - client identifier \n
+    type: string \n
+    example: 01:02:03:03:04:aa:bb:cc
+
+  - <b>valid_lifetime</b> - valid lifetime \n
+    type: uint32_t \n
+    example: 200
+
+  - <b>expire</b> - expiration date \n
+    type: uint64_t (cltt + valid lifetime) \n
+    example: 1733517739
+
+  - <b>subnet_id</b> - DHCPv4 subnet identifier \n
+    type: int32_t (0 and max excluded) \n
+    example: 1
+
+  - <b>fqdn_fwd</b> - FQDN forward DNS RR update flag \n
+    type: bool (0 or 1) \n
+    example: 0
+
+  - <b>fqdn_rev</b> - FQDN reverse DNS RR update flag \n
+    type: bool (0 or 1) \n
+    example: 1
+
+  - <b>hostname</b> - hostname \n
+    type: string (separators are escaped) \n
+    example: foo.bar
+
+  - <b>state</b> - lease state \n
+    type: int32_t (0 = assigned, 1 = declined, 2 = expired-reclaimed, 3 = released) \n
+    example: 0
+
+  - <b>user_context</b> - user context \n
+    type: string (separators are escaped) \n
+    example: <tt>{ \"foo\": true }</tt>
+
+  - <b>pool_id</b> - pool identifier \n
+    type: uint32_t \n
+    example: 0
+
+  for instance:
+\verbatim
+192.0.2.2,02:02:02:02:02:02,,200,200,8,1,1,,1,{ \"foo\": true },0\n
+\endverbatim
+
+  More examples can be found in unit tests.
+
+  @subsection lease6-csv DHCPv6 lease entry format in CSV files
+
+  - <b>address</b> - IPv6 address \n
+    type: string \n
+    example: 2001:db8:1::1
+
+  - <b>DUID</b> - client DUID \n
+    type: string \n
+    example: 01:02:03:04:05:aa:bb:cc
+
+  - <b>valid_lifetime</b> - valid lifetime \n
+    type: uint32_t \n
+    example: 200
+
+  - <b>expire</b> - expiration date \n
+    type: uint64_t (cltt + valid lifetime) \n
+    example: 1733517739
+
+  - <b>subnet_id</b> - DHCPv6 subnet identifier \n
+    type: int32_t (0 and max excluded) \n
+    example: 1
+
+  - <b>pref_lifetime</b> - preferred lifetime \n
+    type: uint32_t \n
+    example: 100
+
+  - <b>lease_type</b> - lease type \n
+    type: Lease::Type enum (0 for NA, 2 for PD) \n
+    example: 0
+
+  - <b>iaid</b> - IA identifier \n
+    type: uint32_t
+    example: 1
+
+  - <b>prefix_len</b> - prefix length \n
+    type: uint8_t (0 to 128)
+    example: 64
+
+  - <b>fqdn_fwd</b> - FQDN forward DNS RR update flag \n
+    type: bool (0 or 1) \n
+    example: 0
+
+  - <b>fqdn_rev</b> - FQDN reverse DNS RR update flag \n
+    type: bool (0 or 1) \n
+    example: 1
+
+  - <b>hostname</b> - hostname \n
+    type: string (separators are escaped) \n
+    example: foo.bar
+
+  - <b>hwaddr</b> - hardware address (hardware type is in hwtype column) \n
+    type: string \n
+    example: 00:01:02:03:04:05
+
+  - <b>state</b> - lease state \n
+    type: int32_t (0 = assigned, 1 = declined, 2 = expired-reclaimed, 3 = released) \n
+    example: 0
+
+  - <b>user_context</b> - user context \n
+    type: string (separators are escaped) \n
+    example: <tt>{ \"foo\": true }</tt>
+
+  - <b>hwtype</b> - hardware type \n
+    type: uint16_t (can be empty/omitted) \n
+    example: 1
+
+  - <b>hwaddr_source</b> - source of hardware address and type \n
+    tyoe: uint32_t (one bit from an 8 bit mask, can be empty/omitted) \n
+    example: 0
+
+  - <b>pool_id</b> - pool identifier \n
+    type: uint32_t \n
+    example: 0
+
+  For instance:
+\verbatim
+2001:db8::1,00:01:02:03:04:05:06:0f,200,800,8,100,0,7,128,1,1,,,1,{ \"foo\": true },,,0\n
+\endverbatim
+
+  More examples can be found in unit tests.
+
+  @section dhcpdb-host Host Backends
+
+  Host backends (known also as host data sources) are similar to lease
+  backends with a few differences:
+
+  - host backends are optional (so it is allowed to have none) because
+    the first source of host reservations is the server configuration,
+    others are alternate backends.
+
+  - there may be more than one host backend. In such a case for lookups
+    returning a collection all results are appended, for lookups returning
+    at most one entry the first found is returned. Add operation is submitted
+    to all alternate backends which can ignore it, add the entry or throw
+    if the new entry conflicts with an already existing one. Delete
+    operations are submitted in sequence to all alternate backends until
+    one finds the entry, deletes it and returns true.
+
+  - the first alternate backend can be a cache (host cache hook library
+    is a premium feature) which avoids to lookup slow databases.
+    For subnet ID and identifier negative caching is optionally supported.
+
+  - host backends which do not support host collection (as host cache
+    and RADIUS) must return an empty collection (so not contributing
+    to the final result) from all methods returning collections.
+    Of course the core code must not use these methods with these backends
+    but there are some callers outside the server core code, e.g. the
+    host commands hook library.
+
+  @subsection dhcpdb-caching Caching
+
+  Some of these considerations apply to lease backends too but only
+  the host caching was analyzed and implemented.
+
+  Caching divides into two parts, positive and negative caching, and
+  its support is implemented at two places, a cache backend and inside
+  the host manager, i.e. the entity calling backends in sequence
+  providing the result of lookups to allocation engines.
+
+  The idea of positive caching is simple: when a value not in the
+  cache in returned by a database, this value is added to the cache
+  so the next time it will be available without calling and waiting
+  for the database.
+
+  This cannot be extended to lookups returning a collection because
+  they are supposed to collect and append results from all backends.
+  If you replace append by merge you avoid duplicate items in the
+  result but still get no benefit from caching. So in general a cache
+  backend should simply return nothing for these lookups.
+
+  Add (or any operation which can fail) has to wait that all backends
+  are called and possibly one fails before the new entry being cached.
+  Del is simpler: the cache backend processes it but always returns
+  false so the backend holding it if any is called.
+
+  Negative caching consists into adding fake entries indicating that
+  a particular host does not exists. As no host constructor allows
+  a host object without an identifier or with an empty identifier,
+  negative caching applies only to by identifier lookups. This is
+  no a problem because out-of-pools provides a clearer and simpler
+  to implement performance benefit than by address negative caching.
+  Note that by identifier negative caching can be critical for
+  performance because the non-existence is the worst case for lookups.
+
+  Negative cache entries should be easily identified (current
+  implementation uses the negative_ flag member in @c host class)
+  so all lookups returning at most one entry can (in fact have to)
+  return a null pointer when they get a negative cache entry.
+  Note this is for all such lookups, not only by identifier lookups,
+  to allow to negative cached entries with any value, for instance
+  with a IP address.
+
+  There is no direct and simple way to support negative caching
+  for collection lookups so again cache backends should return nothing
+  for these lookups which have not to filter out negative cached entries
+  from result.
+
+  Negative caching can be performed by the host manager: when a by
+  identifier lookup returns a null pointer, a fake entry with lookup
+  parameters and the negative cache mark is inserted into the cache.
+  Note this leads to negative cache entries without IP reservations,
+  this property should not be used because it limits negative cache
+  addition to only be performed by the host manager.
+
+@section dhcpDatabaseBackendsMTConsiderations Multi-Threading Consideration for DHCP Database Backends
+
+Lease and host database backends including the memfile for leases are Kea
+thread safe (i.e. are thread safe when the multi-threading mode is true).
+This extends to legal / forensic log backends but not to config
+backends which is used only for configuration by the main thread with
+packet processing threads stopped so has no thread safety
+requirements.
+
+There are exceptions:
+
+ - memfile constructor (including loading of leases from files) is not
+  thread safe.
+
+ - lfc handling in memfile is not thread safe: instead it is required
+  to be called from the main thread.
+
+ - wipe lease methods are either not thread safe or not implemented.
+
+Note for statistics queries it does not make sense to call them with
+running packet processing threads so they have no thread safety guarantees.
+
+Note too that the memfile backend is not inter-process safe so must be kept
+private to the Kea server using it.
+
+  */

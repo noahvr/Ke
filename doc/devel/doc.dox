@@ -1,0 +1,101 @@
+// Copyright (C) 2018-2026 Internet Systems Consortium, Inc. ("ISC")
+//
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+/**
+
+ @page docs Building Kea Documentation
+
+ There are several types of documentation for Kea. The primary one, intended to
+ be read by users, is User's Guide. It comes in HTML, PDF and txt format. All
+ of them generated from the same sources. To generate the documentation, sphinx and
+ sphinx_rtd_theme have to be available on the system. texlive is also required
+ if you want to create documentation in HTML format.
+ You can generate this by doing:
+@code
+$ meson setup build
+$ meson compile -C build doc
+@endcode
+
+The output files will be generated in the `./build/doc/sphinx/_build` directory.
+
+The ARM has an appendix that lists all Kea commands. The commands are integrated
+into RST using the tool located at doc/sphinx/api2doc.py. The basic principle
+is that for every command there is a JSON file that briefly describes the major
+aspects such as name, short description, expected syntax, expected response,
+a hook that needs to be loaded, first Kea version where it appeared, etc.
+Those JSON files are loaded by the api2doc.py tool that will generate api.txt
+that will be used by sphinx. There is no need to call this tool explicitly.
+It is called automatically when building the ARM.
+
+The ARM has an appendix that lists all Kea messages.
+
+The ARM has an appendix with the grammar.
+
+The ARM has an appendix with various UML diagrams.
+
+If either commands, messages, grammar, or UMLs changed, you can regenerate the
+documentation for each of them with the following procedure:
+
+@code
+$ meson setup build
+$ meson compile -C build grammar
+$ meson compile -C build mes-doc
+$ meson compile -C build uml
+$ meson compile -C build doc
+@endcode
+
+After that, inspect the HTML output and make sure it's ok, review changes in
+\c doc/sphinx/grammar/ and then check in those that are something more than a date
+update. The date is there, so we (and users) can determine if the grammar
+is or isn't out of date.
+
+Sphinx is a Python tool that was several Python packages. To ensure reproducibility of the
+documentation that it generates, a file named requirements.txt is used to lock the version for
+Sphinx and its dependencies. The file is located at `doc/sphinx/src/requirements.txt`. It can be
+regenerated based on input from `doc/sphinx/src/requirements.in` as long as you have `pip-compile`
+installed with the following procedure:
+
+@code
+$ meson setup build
+$ meson compile -C build update-python-dependencies
+@endcode
+
+@section docsNewCommand Documenting new command
+
+There are several steps needed to document a new API command:
+
+ 1. Set up the build with "meson setup build".
+ 2. Copy src/share/api/_template.json to appropriate name.
+ 3. Remove comments from it and fill in the actual content.
+ 4. Run "meson setup --reconfigure build" to rebuild the list of API files.
+ 5. "meson compile -C build doc" will generate both multi-page and single-page
+    HTML sites.
+
+A word of caution regaring editing JSON files. The files themselves need to be
+valid JSON files. They also often contain fields, such as command syntax or
+command response, there are themselves a JSON or JSON like structures. That
+means that some trickery with escaping double quotes will be involved. Note
+there is no need to escape any other character, unless you want to specify
+non-printable characters.
+
+Also, while Kea's JSON parser supports comments and multi-line string, they
+are not part of JSON standard. That means that external tools, such as python
+or Sphinx parsers are not able to deal with them. Therefore comments must
+be removed and long strings (such as command descriptions or example invocations)
+are to be presented as a list of strings ( e.g. [ "line1", "line2, "line3" ]).
+
+@section docsDevelGuide Generating Developer's Guide
+
+Generating Developer's Guide is very simple, although you need to have
+doxygen installed in your system. If you also have graphviz installed, it will
+generate nice diagrams. To generate developer's guide, do the following commands:
+
+@code
+$ meson setup build
+$ meson compile -C build devel
+@endcode
+
+*/

@@ -1,0 +1,4356 @@
+#!/bin/sh
+
+# Copyright (C) 2015-2026 Internet Systems Consortium, Inc. ("ISC")
+#
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+# shellcheck disable=SC2154
+# SC2154: ... is referenced but not assigned.
+# Reason: some variables are sourced.
+
+# Exit with error if commands exit with non-zero and if undefined variables are
+# used.
+set -eu
+
+# Include common test library.
+# shellcheck source=src/lib/testutils/dhcp_test_lib.sh.in
+. "@abs_top_builddir@/src/lib/testutils/dhcp_test_lib.sh"
+
+# Include admin utilities
+# shellcheck source=src/bin/admin/admin-utils.sh.in
+. "@abs_top_builddir@/src/bin/admin/admin-utils.sh"
+
+# Set the test database password
+set_db_password "keatest"
+
+# Set path to the production schema scripts
+db_scripts_dir="@abs_top_srcdir@/src/share/database/scripts"
+
+# Set location of the kea-admin.
+kea_admin="@abs_top_builddir@/src/bin/admin/kea-admin"
+
+# Convenience function for running an SQL statement
+# param hdr - text message to prepend to any error
+# param qry - SQL statement to run
+# param exp_value - optional expected value.  This can be used IF the SQL statement
+# generates a single value, such as a SELECT which returns one column for one row.
+#
+# A specific exit code other than 0 can be expected by setting the KEA_EXPECTED_EXIT_CODE env var.
+#
+# Examples:
+#
+#   qry="insert into lease6 (address, lease_type, subnet_id, state) values ($addr,$ltype,1,0)"
+#   run_statement "#2" "$qry"
+#
+#   qry="select leases from lease6_stat where subnet_id = 1 and lease_type = $ltype and state = 0"
+#   run_statement "#3" "$qry" 1
+run_statement() {
+    hdr="$1"; shift
+    qry="$1"; shift
+    exp_value="${1-}"  # Optional value. If not given, replace with empty string.
+
+    # Execute the statement
+    run_command \
+        pgsql_execute "${qry}"
+    value="${OUTPUT}"
+
+    if test -n "${KEA_EXPECTED_EXIT_CODE+x}"; then
+        # We expect a specific exit code.
+        assert_eq "${KEA_EXPECTED_EXIT_CODE}" "${EXIT_CODE}" "$hdr: SQL=[${qry}] expected to return %d, returned %d"
+    else
+        # Execution should succeed.
+        assert_eq 0 "${EXIT_CODE}" "$hdr: SQL=[$qry] failed: (expected status code %d, returned %d)"
+    fi
+
+    # If there's an expected value, test it
+    if [ "x$exp_value" != "x" ]
+    then
+        assert_str_eq "$exp_value" "$value" "$hdr: SQL=[$qry] wrong: (expected value %s, returned %s)"
+    fi
+}
+
+# Checks that a column in a table exists.
+# param column name of the column to check
+# param table name of table containing the column
+check_table_column() {
+    column=$1;shift
+    table=$1;shift
+
+    qry="select $column from $table limit 1"
+    run_command \
+        pgsql_execute "${qry}"
+    assert_eq 0 "${EXIT_CODE}" "${qry}. (expected status code %d, returned %d)"
+}
+
+# Wipe all tables from the DB:
+pgsql_wipe() {
+    printf "Wiping whole database %s...\n" "${db_name}"
+    export PGPASSWORD="${db_password}"
+
+    run_command \
+        psql --set ON_ERROR_STOP=1 -A -t -q -U keatest -d keatest -f "${db_scripts_dir}/pgsql/dhcpdb_drop.pgsql"
+    assert_eq 0 "${EXIT_CODE}" "pgsql_wipe drop failed, expected exit code: %d, actual: %d"
+}
+
+pgsql_db_init_test() {
+    test_start "pgsql.db-init"
+
+    # Let's wipe the whole database
+    pgsql_wipe
+
+    # Create the database
+    run_command \
+        "${kea_admin}" db-init pgsql -u "${db_user}" -p "${db_password}" -n "${db_name}" -d "${db_scripts_dir}"
+    assert_eq 0 "${EXIT_CODE}" "kea-admin db-init pgsql failed, expected exit code: %d, actual: %d"
+
+    # Verify that all the expected tables exist
+
+    # Check schema_version table
+    run_command \
+        pgsql_execute "SELECT version, minor FROM schema_version"
+    assert_eq 0 "${EXIT_CODE}" "schema_version table check failed, expected exit code: %d, actual: %d"
+
+    # Check lease4 table
+    run_command \
+        pgsql_execute "SELECT address, hwaddr, client_id, valid_lifetime, expire, subnet_id, fqdn_fwd, fqdn_rev, hostname, state, user_context FROM lease4"
+    assert_eq 0 "${EXIT_CODE}" "lease4 table check failed, expected exit code: %d, actual: %d"
+
+    # Check lease6 table
+    run_command \
+        pgsql_execute "SELECT address, duid, valid_lifetime, expire, subnet_id, pref_lifetime, lease_type, iaid, prefix_len, fqdn_fwd, fqdn_rev, hostname, state, user_context FROM lease6"
+    assert_eq 0 "${EXIT_CODE}" "lease6 table check failed, expected exit code: %d, actual: %d"
+
+    # Check lease6_types table
+    run_command \
+        pgsql_execute "SELECT lease_type, name FROM lease6_types"
+    assert_eq 0 "${EXIT_CODE}" "lease6_types table check failed, expected exit code: %d, actual: %d"
+
+    # Check lease_state table
+    run_command \
+        pgsql_execute "SELECT state, name FROM lease_state"
+    assert_eq 0 "${EXIT_CODE}" "lease_state table check failed, expected exit code: %d, actual: %d"
+
+    # Trying to create it again should fail.  This verifies the db present
+    # check
+    printf '\nDB created successfully, make sure we are not allowed to try it again:\n'
+    run_command \
+        "${kea_admin}" db-init pgsql -u "${db_user}" -p "${db_password}" -n "${db_name}" -d "${db_scripts_dir}"
+    assert_eq 2 "${EXIT_CODE}" "kea-admin failed to deny db-init, expected exit code: %d, actual: %d"
+
+    # Let's wipe the whole database
+    pgsql_wipe
+
+    test_finish 0
+}
+
+pgsql_db_version_test() {
+    test_start "pgsql.db-version"
+
+    # Let's wipe the whole database
+    pgsql_wipe
+
+    # Do not create any table so db-version will raise an error
+    printf 'Checking db-version error case...\n'
+    run_command \
+        "${kea_admin}" db-version pgsql -u "${db_user}" -p "${db_password}" -n "${db_name}"
+    assert_eq 3 "${EXIT_CODE}" "schema_version table still exists. (expected %d, exit code %d)"
+
+    # Create the database
+    run_command \
+        "${kea_admin}" db-init pgsql -u "${db_user}" -p "${db_password}" -n "${db_name}" -d "${db_scripts_dir}"
+    assert_eq 0 "${EXIT_CODE}" "cannot initialize the database, expected exit code: %d, actual: %d"
+
+    # Verify that kea-admin db-version returns the latest version.
+    run_command \
+        "${kea_admin}" db-version pgsql -u "${db_user}" -p "${db_password}" -n "${db_name}"
+    version="${OUTPUT}"
+    assert_str_eq "34.0" "${version}" "Expected kea-admin to return %s, returned value was %s"
+
+    # Let's wipe the whole database
+    pgsql_wipe
+
+    test_finish 0
+}
+
+pgsql_upgrade_1_0_to_2_0_test() {
+    # Added state column to lease4
+    run_command \
+        pgsql_execute "select state from lease4"
+    assert_eq 0 "${EXIT_CODE}" "lease4 is missing state column. (expected status code %d, returned %d)"
+
+    # Added state column to lease6
+    run_command \
+        pgsql_execute "select state from lease6"
+    assert_eq 0 "${EXIT_CODE}" "lease6 is missing state column. (expected status code %d, returned %d)"
+
+    # Added stored procedures for lease dumps
+    run_command \
+        pgsql_execute "select lease4DumpHeader from lease4DumpHeader()"
+    assert_eq 0 "${EXIT_CODE}" "function lease4DumpHeader() broken or missing. (expected status code %d, returned %d)"
+
+    run_command \
+        pgsql_execute "select address from lease4DumpData()"
+    assert_eq 0 "${EXIT_CODE}" "function lease4DumpData() broken or missing. (expected status code %d, returned %d)"
+
+    run_command \
+        pgsql_execute "select lease6DumpHeader from lease6DumpHeader()"
+    assert_eq 0 "${EXIT_CODE}" "function lease6DumpHeader() broken or missing. (expected status code %d, returned %d)"
+
+    run_command \
+        pgsql_execute "select address from lease6DumpData()"
+    assert_eq 0 "${EXIT_CODE}" "function lease6DumpData() broken or missing. (expected status code %d, returned %d)"
+}
+
+pgsql_upgrade_2_0_to_3_0_test() {
+    # Added hwaddr, hwtype, and hwaddr_source columns to lease6 table
+    run_command \
+        pgsql_execute "select hwaddr, hwtype, hwaddr_source from lease6"
+    assert_eq 0 "${EXIT_CODE}" "lease6 table not upgraded to 3.0 (expected status code %d, returned %d)"
+
+    # Added lease_hwaddr_source table
+    run_command \
+        pgsql_execute "select hwaddr_source, name from lease_hwaddr_source"
+    assert_eq 0 "${EXIT_CODE}" "lease_hwaddr_source table is missing or broken. (expected status code %d, returned %d)"
+
+    # Added hosts table
+    run_command \
+        pgsql_execute "select host_id, dhcp_identifier, dhcp_identifier_type, dhcp4_subnet_id, dhcp6_subnet_id, ipv4_address, hostname, dhcp4_client_classes, dhcp6_client_classes, dhcp4_next_server, dhcp4_server_hostname, dhcp4_boot_file_name, auth_key from hosts"
+    assert_eq 0 "${EXIT_CODE}" "hosts table is missing or broken. (expected status code %d, returned %d)"
+
+    # Added ipv6_reservations table
+    run_command \
+        pgsql_execute "select reservation_id, address, prefix_len, type, dhcp6_iaid, host_id from ipv6_reservations"
+    assert_eq 0 "${EXIT_CODE}" "ipv6_reservations table is missing or broken. (expected status code %d, returned %d)"
+
+    # Added dhcp4_options table
+    run_command \
+        pgsql_execute "select option_id, code, value, formatted_value, space, persistent, dhcp_client_class, dhcp4_subnet_id, host_id, scope_id from dhcp4_options"
+    assert_eq 0 "${EXIT_CODE}" "dhcp4_options table is missing or broken. (expected status code %d, returned %d)"
+
+    # Added dhcp6_options table
+    run_command \
+        pgsql_execute "select option_id, code, value, formatted_value, space, persistent, dhcp_client_class, dhcp6_subnet_id, host_id,scope_id from dhcp6_options"
+    assert_eq 0 "${EXIT_CODE}" "dhcp6_options table is missing or broken. (expected status code %d, returned %d)"
+
+    # Added  host_identifier_type table
+    run_command \
+        pgsql_execute "select type, name from host_identifier_type"
+    assert_eq 0 "${EXIT_CODE}" "host_identifier_type table is missing or broken. (expected status code %d, returned %d)"
+
+    # Added dhcp_option_scope table
+    run_command \
+        pgsql_execute "select scope_id, scope_name from dhcp_option_scope"
+    assert_eq 0 "${EXIT_CODE}" "dhcp_option_scope table is missing or broken. (expected status code %d, returned %d)"
+
+    # Added dhcp6_options table
+    run_command \
+        pgsql_execute "select option_id, code, value, formatted_value, space, persistent, dhcp_client_class, dhcp6_subnet_id, host_id,scope_id from dhcp6_options"
+    assert_eq 0 "${EXIT_CODE}" "dhcp6_options table is missing or broken. (expected status code %d, returned %d)"
+
+    # Added order by clause to lease4DumpData
+    run_command \
+        pgsql_execute "select address from lease4DumpData()"
+    assert_eq 0 "${EXIT_CODE}" "function lease4DumpData() broken or missing. (expected status code %d, returned %d)"
+    run_command \
+        pgsql_execute "\sf lease4DumpData"
+    assert_eq 0 "${EXIT_CODE}" "\sf of lease4DumpData failed. (expected status code %d, returned %d)"
+    count=$(echo "${OUTPUT}" | grep -Eci 'order by [a-z]*[\.]?address') || true
+    assert_eq 1 "${count}" "lease4DumpData is missing order by clause. (expected count %d, returned %d)"
+
+    # Added hwaddr columns to lease6DumpHeader
+    run_command \
+        pgsql_execute "select lease6DumpHeader from lease6DumpHeader()"
+    assert_eq 0 "${EXIT_CODE}" "function lease6DumpHeader() broken or missing. (expected status code %d, returned %d)"
+    count=$(echo "${OUTPUT}" | grep -Fci 'hwaddr') || true
+    assert_eq 1 "${count}" "lease6DumpHeader is missing the hwaddr column"
+    count=$(echo "${OUTPUT}" | grep -Fci 'hwtype') || true
+    assert_eq 1 "${count}" "lease6DumpHeader is missing the hwtype column"
+    count=$(echo "${OUTPUT}" | grep -Fci 'hwaddr_source') || true
+    assert_eq 1 "${count}" "lease6DumpHeader is missing the hwaddr_source column"
+
+    # Added hwaddr columns to lease6DumpData
+    run_command \
+        pgsql_execute "select hwaddr,hwtype,hwaddr_source from lease6DumpData()"
+    assert_eq 0 "${EXIT_CODE}" "function lease6DumpData() broken or missing. (expected status code %d, returned %d)"
+
+    # Added order by clause to lease6DumpData
+    run_command \
+        pgsql_execute "\sf lease6DumpData"
+    assert_eq 0 "${EXIT_CODE}" "\sf of lease6DumpData failed. (expected status code %d, returned %d)"
+    count=$(echo "${OUTPUT}" | grep -Eci 'order by [a-z]*[\.]?address') || true
+    assert_eq 1 "${count}" "lease6DumpData is missing order by clause. (expected count %d, returned %d)"
+
+    # lease_hardware_source should have row for source = 0
+    run_command \
+        pgsql_execute "select count(hwaddr_source) from lease_hwaddr_source where hwaddr_source = 0 and name='HWADDR_SOURCE_UNKNOWN'"
+    assert_eq 0 "${EXIT_CODE}" "select from lease_hwaddr_source failed. (expected status code %d, returned %d)"
+    assert_eq 1 "${OUTPUT}" "lease_hwaddr_source does not contain entry for HWADDR_SOURCE_UNKNOWN. (record count %d, expected %d)"
+}
+
+pgsql_upgrade_3_0_to_6_1_test() {
+    # Added user_context to lease4
+    run_command \
+        pgsql_execute "select user_context from lease4"
+    assert_eq 0 "${EXIT_CODE}" "lease4 is missing user_context column. (expected status code %d, returned %d)"
+
+    # Added user_context to lease6
+    run_command \
+        pgsql_execute "select user_context from lease6"
+    assert_eq 0 "${EXIT_CODE}" "lease6 is missing user_context column. (expected status code %d, returned %d)"
+
+    # Added logs table
+    run_command \
+        pgsql_execute "select timestamp, address, log from logs"
+    assert_eq 0 "${EXIT_CODE}" "logs table is missing or broken. (expected status code %d, returned %d)"
+}
+
+pgsql_upgrade_6_1_to_6_2_test() {
+    insert_sql="\
+insert into hosts(dhcp_identifier, dhcp_identifier_type, dhcp4_subnet_id, ipv4_address) values (decode('010101010101', 'hex'), 0, 1, x'FFAF0002'::int);\
+insert into hosts(dhcp_identifier, dhcp_identifier_type, dhcp4_subnet_id, ipv4_address) values (decode('010101010102', 'hex'), 0, 1, x'FFAF0002'::int)"
+    run_command \
+        pgsql_execute "$insert_sql"
+    assert_eq 0 "${EXIT_CODE}" "insert into hosts failed, expected exit code %d, actual %d"
+}
+
+pgsql_upgrade_6_2_to_7_0_test() {
+    # dhcp4_server should have a single entry for 'all'
+    select_sql="SELECT id, tag, description, modification_ts from dhcp4_server where id = 1 and tag = 'all'"
+    run_command \
+        pgsql_execute "$select_sql"
+    assert_eq 0 "${EXIT_CODE}" "the dhcp4_server table is broken or missing. (expected status code %d, returned %d)"
+
+    # dhcp6_server should have a single entry for 'all'
+    select_sql="SELECT id, tag, description, modification_ts from dhcp6_server where id = 1 and tag = 'all'"
+    run_command \
+        pgsql_execute "$select_sql"
+    assert_eq 0 "${EXIT_CODE}" "the dhcp6_server table is broken or missing. (expected status code %d, returned %d)"
+
+    # Verify that session variable setting is present and functional.
+    session_sql="\
+select get_session_value('kea.text'); \
+select set_session_value('kea.text', 'booya'); \
+select get_session_value('kea.text'); \
+select get_session_boolean('kea.bool'); \
+select set_session_value('kea.bool', true); \
+select get_session_boolean('kea.bool'); \
+select get_session_big_int('kea.bigint'); \
+select set_session_value('kea.bigint', cast('1984' as BIGINT)); \
+select get_session_big_int('kea.bigint'); \
+"
+    run_command \
+        pgsql_execute "$session_sql"
+    assert_eq 0 "${EXIT_CODE}" "session variable handling broken. (expected status code %d, returned %d)"
+    clean_out=$(echo "${OUTPUT}" | tr '\n' ' ')
+    assert_str_eq "  booya f  t 0  1984 "  "${clean_out}" "session variable output incorrect"
+}
+
+pgsql_upgrade_7_0_to_8_0_test() {
+    run_command \
+        pgsql_execute "$session_sql"
+
+    # Added class_id to dhcp4_option_def
+    run_command \
+        pgsql_execute "select class_id from dhcp4_option_def"
+    assert_eq 0 "${EXIT_CODE}" "dhcp4_option_def is missing class_id column. (expected status code %d, returned %d)"
+
+    # Added class_id to dhcp6_option_def
+    run_command \
+        pgsql_execute "select class_id from dhcp6_option_def"
+    assert_eq 0 "${EXIT_CODE}" "dhcp6_option_def is missing class_id column. (expected status code %d, returned %d)"
+
+    # Added preferred lifetime columns to dhcp6_client_class.
+    run_command \
+        pgsql_execute "select preferred_lifetime, min_preferred_lifetime, max_preferred_lifetime from dhcp6_client_class"
+    assert_eq 0 "${EXIT_CODE}" "dhcp6_client_class is missing preferred lifetime column(s). (expected status code %d, returned %d)"
+
+    # Check the output of colonSeparatedHex().
+    run_command \
+        pgsql_execute "SELECT colonSeparatedHex('f123456789')"
+    assert_eq 0 "${EXIT_CODE}" 'colonSeparatedHex() failed, expected exit code %d, actual %d'
+    assert_str_eq 'f1:23:45:67:89' "${OUTPUT}"
+
+    run_command \
+        pgsql_execute "SELECT colonSeparatedHex('')"
+    assert_eq 0 "${EXIT_CODE}" 'colonSeparatedHex() failed, expected exit code %d, actual %d'
+    assert_str_eq '' "${OUTPUT}"
+
+    run_command \
+        pgsql_execute "SELECT colonSeparatedHex('f')"
+    assert_eq 0 "${EXIT_CODE}" 'colonSeparatedHex() failed, expected exit code %d, actual %d'
+    assert_str_eq '0f' "${OUTPUT}"
+
+    run_command \
+        pgsql_execute "SELECT colonSeparatedHex('f1')"
+    assert_eq 0 "${EXIT_CODE}" 'colonSeparatedHex() failed, expected exit code %d, actual %d'
+    assert_str_eq 'f1' "${OUTPUT}"
+
+    run_command \
+        pgsql_execute "SELECT colonSeparatedHex('f12')"
+    assert_eq 0 "${EXIT_CODE}" 'colonSeparatedHex() failed, expected exit code %d, actual %d'
+    assert_str_eq '0f:12' "${OUTPUT}"
+
+    # Check lease4Dump*().
+    run_command \
+        pgsql_execute "INSERT INTO lease4 VALUES(10,E'\\\\x3230',E'\\\\x3330',40,TO_TIMESTAMP(1678900000),50,'t','t','one,example,com',0,'{ \"a\": 1, \"b\": 2 }')"
+    assert_eq 0 "${EXIT_CODE}" 'INSERT INTO lease4 failed, expected exit code %d, actual %d'
+    assert_str_eq '' "${OUTPUT}"
+
+    run_command \
+        pgsql_execute "SELECT * FROM lease4DumpHeader()"
+    assert_eq 0 "${EXIT_CODE}" 'lease4DumpHeader() failed, expected exit code %d, actual %d'
+    assert_str_eq 'address,hwaddr,client_id,valid_lifetime,expire,subnet_id,fqdn_fwd,fqdn_rev,hostname,state,user_context,pool_id' "${OUTPUT}"
+
+    run_command \
+        pgsql_execute "SELECT * FROM lease4DumpData()" --field-separator=','
+    assert_eq 0 "${EXIT_CODE}" 'lease4DumpData() failed, expected exit code %d, actual %d'
+    assert_str_eq '0.0.0.10,32:30,33:30,40,1678900000,50,1,1,one&#x2cexample&#x2ccom,0,{ "a": 1&#x2c "b": 2 },0' "${OUTPUT}"
+
+    # Check lease6Dump*().
+    run_command \
+        pgsql_execute "INSERT INTO lease6 VALUES(cast('::10' as inet),E'\\\\x3230',30,TO_TIMESTAMP(1678900000),40,50,0,60,70,'t','t','one,example,com',0,E'\\\\x3830',16,0,'{ \"a\": 1, \"b\": 2 }',0)"
+    assert_eq 0 "${EXIT_CODE}" 'INSERT INTO lease6 failed, expected exit code %d, actual %d'
+    assert_str_eq '' "${OUTPUT}"
+
+    run_command \
+        pgsql_execute "SELECT * FROM lease6DumpHeader()"
+    assert_eq 0 "${EXIT_CODE}" 'lease6DumpHeader() failed, expected exit code %d, actual %d'
+    assert_str_eq 'address,duid,valid_lifetime,expire,subnet_id,pref_lifetime,lease_type,iaid,prefix_len,fqdn_fwd,fqdn_rev,hostname,hwaddr,state,user_context,hwtype,hwaddr_source,pool_id' "${OUTPUT}"
+
+    run_command \
+        pgsql_execute "SELECT * FROM lease6DumpData()" --field-separator=','
+    assert_eq 0 "${EXIT_CODE}" 'lease6DumpData() failed, expected exit code %d, actual %d'
+    assert_str_eq '::10,32:30,30,1678900000,40,50,0,60,70,1,1,one&#x2cexample&#x2ccom,38:30,0,{ "a": 1&#x2c "b": 2 },16,0,0' "${OUTPUT}"
+
+    # Check lease4Upload().
+    run_command \
+        pgsql_execute "SELECT lease4Upload('192.0.0.0','ff0102030405','01ff0102030405',7200,1234567890,1,0,0,'',0,'',0)"
+    assert_eq 0 "${EXIT_CODE}" 'lease4Upload() failed, expected exit code %d, actual %d'
+    assert_str_eq '' "${OUTPUT}"
+
+    # Check lease6Upload().
+    run_command \
+        pgsql_execute "SELECT lease6Upload('2001:db8::','000100012955cb80ff0102030407',7200,1234567890,1,3600,0,1,128,0,0,'','ff0102030407',0,'',90,16,0)"
+    assert_eq 0 "${EXIT_CODE}" 'lease6Upload() failed, expected exit code %d, actual %d'
+    assert_str_eq '' "${OUTPUT}"
+}
+
+pgsql_upgrade_8_0_to_9_0_test() {
+    run_command \
+        pgsql_execute "$session_sql"
+
+    # Most changes are not readily testable without querying the information schema,
+    # not sure the effort is worthwhile.  Verify that function gmt_epoch() was created.
+    run_command \
+        pgsql_execute "select gmt_epoch(now())"
+    assert_eq 0 "${EXIT_CODE}" "function gmt_epoch() broken or missing. (expected status code %d, returned %d)"
+}
+
+pgsql_upgrade_9_0_to_10_test() {
+    run_command \
+        pgsql_execute "$session_sql"
+
+    # Get function source code so we can check that it returns NEW.
+    # Function name must be lower case for WHERE clause.
+    run_command \
+         pgsql_execute "select proname,prosrc from pg_proc where proname='func_dhcp6_client_class_check_dependency_bins'"
+    assert_eq 0 "${EXIT_CODE}" "function func_dhcp6_client_class_check_dependency_BINS() broken or missing. (expected status code %d, returned %d)"
+
+    count=$(echo "${OUTPUT}" | grep -Eci 'RETURN NEW') || true
+    assert_eq 1 "${count}" "func_dhcp6_client_class_check_dependency_BINS is missing RETURN NEW. (expected count %d, returned %d)"
+}
+
+pgsql_upgrade_10_to_11_test() {
+    run_command \
+        pgsql_execute "$session_sql"
+
+    # Get function source code so we can check that it returns NEW.
+    # Function name must be lower case for WHERE clause.
+    run_command \
+         pgsql_execute "select proname,prosrc from pg_proc where proname='createoptionauditdhcp6'"
+    assert_eq 0 "${EXIT_CODE}" "function createOptionAuditDHCP6() broken or missing. (expected status code %d, returned %d)"
+
+    count=$(echo "${OUTPUT}" | grep -Eci 'SELECT dhcp6_pd_pool.subnet_id INTO sid FROM dhcp6_pd_pool WHERE id = pd_pool_id') || true
+    assert_eq 1 "${count}" "function createOptionAuditDHCP6() is missing changed line. (expected count %d, returned %d)"
+}
+
+pgsql_upgrade_11_to_12_test() {
+    run_command \
+        pgsql_execute "$session_sql"
+
+    # Check function source code
+    run_command \
+         pgsql_execute "select proname,prosrc from pg_proc where proname='func_dhcp4_shared_network_bdel'"
+    assert_eq 0 "${EXIT_CODE}" "function func_dhcp4_shared_network_BDEL() broken or missing. (expected status code %d, returned %d)"
+
+    count=$(echo "${OUTPUT}" | grep -Eci 'UPDATE dhcp4_subnet SET shared_network_name = NULL') || true
+    assert_eq 1 "${count}" "function func_dhcp4_shared_network_BDEL() is missing changed line. (expected count %d, returned %d)"
+
+    # Check function source code
+    run_command \
+         pgsql_execute "select proname,prosrc from pg_proc where proname='func_dhcp6_shared_network_bdel'"
+    assert_eq 0 "${EXIT_CODE}" "function func_dhcp6_shared_network_BDEL() broken or missing. (expected status code %d, returned %d)"
+
+    count=$(echo "${OUTPUT}" | grep -Eci 'UPDATE dhcp6_subnet SET shared_network_name = NULL') || true
+    assert_eq 1 "${count}" "function func_dhcp6_shared_network_BDEL() is missing changed line. (expected count %d, returned %d)"
+
+    # user_context should have been added to dhcp4_client_class
+    qry="select user_context from dhcp4_client_class limit 1"
+    run_command \
+        pgsql_execute "${qry}"
+    assert_eq 0 "${EXIT_CODE}" "${qry}. (expected status code %d, returned %d)"
+
+    # user_context should have been added to dhcp6_client_class
+    qry="select user_context from dhcp6_client_class limit 1"
+    run_command \
+        pgsql_execute "${qry}"
+    assert_eq 0 "${EXIT_CODE}" "${qry}. (expected status code %d, returned %d)"
+}
+
+pgsql_upgrade_12_to_13_test() {
+    # -- lease counting tests --
+
+    # Clean up.
+    query="DELETE FROM lease4; DELETE FROM lease6"
+    run_command \
+        pgsql_execute "${query}"
+    assert_eq 0 "${EXIT_CODE}" "${query}: expected %d, returned %d"
+    assert_str_eq '' "${OUTPUT}" "${query}: expected output %s, returned %s"
+
+    # Populate the lease tables.
+    run_command \
+        pgsql_execute "
+            INSERT INTO lease4 (address, subnet_id, state, user_context) VALUES (100,1,0,
+                '{\"ISC\": {\"client-classes\": [\"ALL\", \"KNOWN\", \"bar\", \"foo\"] } }');
+            INSERT INTO lease4 (address, subnet_id, state, user_context) VALUES (101,1,1,
+                '{\"ISC\": {\"client-classes\": [\"ALL\", \"KNOWN\", \"bar\", \"foo\"] } }');
+            INSERT INTO lease4 (address, subnet_id, state, user_context) VALUES (102,1,2,
+                '{\"ISC\": {\"client-classes\": [\"ALL\", \"KNOWN\", \"bar\", \"foo\"] } }');
+            INSERT INTO lease4 (address, subnet_id, state, user_context) VALUES (103,1,0,
+                '{\"ISC\": {\"client-classes\": [\"ALL\", \"KNOWN\", \"bar\", \"foo\"] } }');
+            INSERT INTO lease4 (address, subnet_id, state, user_context) VALUES (104,1,1,
+                '{\"ISC\": {\"client-classes\": [\"ALL\", \"KNOWN\", \"bar\", \"foo\"] } }');
+            INSERT INTO lease4 (address, subnet_id, state, user_context) VALUES (105,1,1,
+                '{\"ISC\": {\"client-classes\": [\"ALL\", \"KNOWN\", \"bar\", \"foo\"] } }');
+            INSERT INTO lease6 (address, lease_type, subnet_id, state, user_context) VALUES (cast('::10' as inet),0,1,0,
+                '{\"ISC\": {\"client-classes\": [\"ALL\", \"KNOWN\", \"bar\", \"foo\"] } }');
+            INSERT INTO lease6 (address, lease_type, subnet_id, state, user_context) VALUES (cast('::11' as inet),0,1,1,
+                '{\"ISC\": {\"client-classes\": [\"ALL\", \"KNOWN\", \"bar\", \"foo\"] } }');
+            INSERT INTO lease6 (address, lease_type, subnet_id, state, user_context) VALUES (cast('::12' as inet),0,1,0,
+                '{\"ISC\": {\"client-classes\": [\"ALL\", \"KNOWN\", \"bar\", \"foo\"] } }');
+            INSERT INTO lease6 (address, lease_type, subnet_id, state, user_context) VALUES (cast('::13' as inet),0,1,1,
+                '{\"ISC\": {\"client-classes\": [\"ALL\", \"KNOWN\", \"bar\", \"foo\"] } }');
+            INSERT INTO lease6 (address, lease_type, subnet_id, state, user_context) VALUES (cast('::14' as inet),2,1,0,
+                '{\"ISC\": {\"client-classes\": [\"ALL\", \"KNOWN\", \"bar\", \"foo\"] } }');
+            INSERT INTO lease6 (address, lease_type, subnet_id, state, user_context) VALUES (cast('::15' as inet),2,1,1,
+                '{\"ISC\": {\"client-classes\": [\"ALL\", \"KNOWN\", \"bar\", \"foo\"] } }');
+            INSERT INTO lease6 (address, lease_type, subnet_id, state, user_context) VALUES (cast('::16' as inet),2,1,0,
+                '{\"ISC\": {\"client-classes\": [\"ALL\", \"KNOWN\", \"bar\", \"foo\"] } }');
+            INSERT INTO lease6 (address, lease_type, subnet_id, state, user_context) VALUES (cast('::17' as inet),2,1,1,
+                '{\"ISC\": {\"client-classes\": [\"ALL\", \"KNOWN\", \"bar\", \"foo\"] } }');
+        "
+    assert_eq 0 "${EXIT_CODE}" 'INSERT INTO leases when upgrading from 11 to 12 failed. expected %d, returned %d'
+    assert_str_eq '' "${OUTPUT}" "INSERT INTO leases when upgrading from 11 to 12 failed. expected output %s, returned %s"
+
+    for v in 4 6; do
+        # Check that client classes were counted correctly.
+        query="SELECT leases FROM lease${v}_stat_by_client_class WHERE client_class = 'foo' LIMIT 1"
+        run_command \
+            pgsql_execute "${query}"
+        assert_eq 0 "${EXIT_CODE}" "${query}: expected %d, returned %d"
+        assert_str_eq 2 "${OUTPUT}" "${query}: expected output %s, returned %s"
+
+        # -- Verify some calls to checkLeaseXLimits(). --
+
+        query="SELECT checkLease${v}Limits('')"
+        run_command \
+            pgsql_execute "${query}"
+        assert_eq 0 "${EXIT_CODE}" "${query}: expected %d, returned %d"
+        assert_str_eq '' "${OUTPUT}" "${query}: expected output %s, returned %s"
+
+        query="SELECT checkLease${v}Limits('{}')"
+        run_command \
+            pgsql_execute "${query}"
+        assert_eq 0 "${EXIT_CODE}" "${query}: expected %d, returned %d"
+        assert_str_eq '' "${OUTPUT}" "${query}: expected output %s, returned %s"
+
+        query="SELECT checkLease${v}Limits('{ \"ISC\": { \"limits\": { \"client-classes\": [ { \"name\": \"foo\", \"address-limit\": 1 } ] } } }')"
+        run_command \
+            pgsql_execute "${query}"
+        assert_eq 0 "${EXIT_CODE}" "${query}: expected %d, returned %d"
+        assert_str_eq "address limit 1 for client class \"foo\", current lease count 2" "${OUTPUT}" "${query}: expected output %s, returned %s"
+
+        query="SELECT checkLease${v}Limits('{ \"ISC\": { \"limits\": { \"subnet\": { \"id\": 1, \"address-limit\": 1 } } } }')"
+        run_command \
+            pgsql_execute "${query}"
+        assert_eq 0 "${EXIT_CODE}" "${query}: expected %d, returned %d"
+        assert_str_eq "address limit 1 for subnet ID 1, current lease count 2" "${OUTPUT}" "${query}: expected output %s, returned %s"
+
+        query="SELECT checkLease${v}Limits('{ \"ISC\": { \"limits\": { \"client-classes\": [ { \"name\": \"foo\", \"address-limit\": 2 } ] } } }')"
+        run_command \
+            pgsql_execute "${query}"
+        assert_eq 0 "${EXIT_CODE}" "${query}: expected %d, returned %d"
+        assert_str_eq "address limit 2 for client class \"foo\", current lease count 2" "${OUTPUT}" "${query}: expected output %s, returned %s"
+
+        query="SELECT checkLease${v}Limits('{ \"ISC\": { \"limits\": { \"subnet\": { \"id\": 1, \"address-limit\": 2 } } } }')"
+        run_command \
+            pgsql_execute "${query}"
+        assert_eq 0 "${EXIT_CODE}" "${query}: expected %d, returned %d"
+        assert_str_eq "address limit 2 for subnet ID 1, current lease count 2" "${OUTPUT}" "${query}: expected output %s, returned %s"
+
+        query="SELECT checkLease${v}Limits('{ \"ISC\": { \"limits\": { \"client-classes\": [ { \"name\": \"foo\", \"address-limit\": 4 } ] } } }')"
+        run_command \
+            pgsql_execute "${query}"
+        assert_eq 0 "${EXIT_CODE}" "${query}: expected %d, returned %d"
+        assert_str_eq '' "${OUTPUT}" "${query}: expected output %s, returned %s"
+
+        query="SELECT checkLease${v}Limits('{ \"ISC\": { \"limits\": { \"subnet\": { \"id\": 1, \"address-limit\": 4 } } } }')"
+        run_command \
+            pgsql_execute "${query}"
+        assert_eq 0 "${EXIT_CODE}" "${query}: expected %d, returned %d"
+        assert_str_eq '' "${OUTPUT}" "${query}: expected output %s, returned %s"
+
+        query="SELECT checkLease${v}Limits('{ \"ISC\": { \"limits\": { \"client-classes\": [ { \"name\": \"foo\", \"address-limit\": 1 }, { \"name\": \"bar\", \"address-limit\": 1 } ], \"subnet\": { \"id\": 1, \"address-limit\": 1 } } } }')"
+        run_command \
+            pgsql_execute "${query}"
+        assert_eq 0 "${EXIT_CODE}" "${query}: expected %d, returned %d"
+        assert_str_eq "address limit 1 for client class \"foo\", current lease count 2" "${OUTPUT}" "${query}: expected output %s, returned %s"
+
+        query="SELECT checkLease${v}Limits('{ \"ISC\": { \"limits\": { \"client-classes\": [ { \"name\": \"foo\", \"address-limit\": 2 }, { \"name\": \"bar\", \"address-limit\": 4 } ], \"subnet\": { \"id\": 1, \"address-limit\": 4 } } } }')"
+        run_command \
+            pgsql_execute "${query}"
+        assert_eq 0 "${EXIT_CODE}" "${query}: expected %d, returned %d"
+        assert_str_eq "address limit 2 for client class \"foo\", current lease count 2" "${OUTPUT}" "${query}: expected output %s, returned %s"
+
+        query="SELECT checkLease${v}Limits('{ \"ISC\": { \"limits\": { \"client-classes\": [ { \"name\": \"foo\", \"address-limit\": 4 }, { \"name\": \"bar\", \"address-limit\": 4 } ], \"subnet\": { \"id\": 1, \"address-limit\": 2 } } } }')"
+        run_command \
+            pgsql_execute "${query}"
+        assert_eq 0 "${EXIT_CODE}" "${query}: expected %d, returned %d"
+        assert_str_eq "address limit 2 for subnet ID 1, current lease count 2" "${OUTPUT}" "${query}: expected output %s, returned %s"
+
+        query="SELECT checkLease${v}Limits('{ \"ISC\": { \"limits\": { \"client-classes\": [ { \"name\": \"foo\", \"address-limit\": 4 }, { \"name\": \"bar\", \"address-limit\": 4 } ], \"subnet\": { \"id\": 1, \"address-limit\": 4 } } } }')"
+        run_command \
+            pgsql_execute "${query}"
+        assert_eq 0 "${EXIT_CODE}" "${query}: expected %d, returned %d"
+        assert_str_eq '' "${OUTPUT}" "${query}: expected output %s, returned %s"
+    done
+
+    # Check that leases counters cannot go negative.
+    for v in 4 6; do
+        query="SELECT leases FROM lease${v}_stat WHERE subnet_id = 1 AND state = 0 LIMIT 1"
+        run_command \
+            pgsql_execute "${query}"
+        assert_eq 0 "${EXIT_CODE}" "${query}: expected %d, returned %d"
+        assert_str_eq '2' "${OUTPUT}" "${query}: expected output %s, returned %s"
+
+        # Artificially change the subnet counter from 2 down to 1.
+        query="UPDATE lease${v}_stat SET leases = 1 WHERE subnet_id = 1 AND state = 0"
+        run_command \
+            pgsql_execute "${query}"
+        assert_eq 0 "${EXIT_CODE}" "${query}: expected %d, returned %d"
+        assert_str_eq '' "${OUTPUT}" "${query}: expected output %s, returned %s"
+
+        query="SELECT leases FROM lease${v}_stat_by_client_class WHERE client_class = 'foo' LIMIT 1"
+        run_command \
+            pgsql_execute "${query}"
+        assert_eq 0 "${EXIT_CODE}" "${query}: expected %d, returned %d"
+        assert_str_eq '2' "${OUTPUT}" "${query}: expected output %s, returned %s"
+
+        # Artificially change the client class counter from 2 down to 1.
+        query="UPDATE lease${v}_stat_by_client_class SET leases = 1 WHERE client_class = 'foo'"
+        run_command \
+            pgsql_execute "${query}"
+        assert_eq 0 "${EXIT_CODE}" "${query}: expected %d, returned %d"
+        assert_str_eq '' "${OUTPUT}" "${query}: expected output %s, returned %s"
+
+        # Clean up.
+        query="DELETE FROM lease${v}"
+        run_command \
+            pgsql_execute "${query}"
+        assert_eq 0 "${EXIT_CODE}" "${query}: expected %d, returned %d"
+        assert_str_eq '' "${OUTPUT}" "${query}: expected output %s, returned %s"
+
+        # SELECT should finish successfully and the subnet counter should be 0.
+        query="SELECT leases FROM lease${v}_stat WHERE subnet_id = 1 AND state = 0 LIMIT 1"
+        run_command \
+            pgsql_execute "${query}"
+        assert_eq 0 "${EXIT_CODE}" "${query}: expected %d, returned %d"
+        assert_str_eq '0' "${OUTPUT}" "${query}: expected output %s, returned %s"
+
+        # SELECT should finish successfully and the client class counter should be 0.
+        query="SELECT leases FROM lease${v}_stat_by_client_class WHERE client_class = 'foo' LIMIT 1"
+        run_command \
+            pgsql_execute "${query}"
+        assert_eq 0 "${EXIT_CODE}" "${query}: expected %d, returned %d"
+        assert_str_eq '0' "${OUTPUT}" "${query}: expected output %s, returned %s"
+    done
+}
+
+pgsql_upgrade_13_to_14_test() {
+    run_command \
+        pgsql_execute "$session_sql"
+
+    # Added cancelled column to dhcp4_options
+    run_command \
+        pgsql_execute "select cancelled from dhcp4_options"
+    assert_eq 0 "${EXIT_CODE}" "dhcp4_options is missing cancelled column. (expected status  code %d, returned %d)"
+
+    # Added cancelled column to dhcp6_options
+    run_command \
+        pgsql_execute "select cancelled from dhcp6_options"
+    assert_eq 0 "${EXIT_CODE}" "dhcp6_options is missing cancelled column. (expected status  code %d, returned %d)"
+
+    # Check if offer_lifetime was added to dhcp4_shared_network table.
+    qry="SELECT offer_lifetime from dhcp4_shared_network limit 1"
+    run_command \
+        pgsql_execute "${qry}"
+    assert_eq 0 "${EXIT_CODE}" "${qry}. (expected status code %d, returned %d)"
+
+    # Check if offer_lifetime was added to dhcp4_subnet table.
+    qry="SELECT offer_lifetime from dhcp4_subnet limit 1"
+    run_command \
+        pgsql_execute "${qry}"
+    assert_eq 0 "${EXIT_CODE}" "${qry}. (expected status code %d, returned %d)"
+
+    # Check if offer_lifetime was added to dhcp4_client_class table.
+    qry="SELECT offer_lifetime from dhcp4_client_class limit 1"
+    run_command \
+        pgsql_execute "${qry}"
+    assert_eq 0 "${EXIT_CODE}" "${qry}. (expected status code %d, returned %d)"
+}
+
+pgsql_upgrade_14_to_15_test() {
+    # Added relay_id column to lease4
+    run_command \
+        pgsql_execute "select relay_id from lease4"
+    assert_eq 0 "${EXIT_CODE}" "lease4 is missing relay_id column. (expected status  code %d, returned %d)"
+
+    # Added remote_id column to lease4
+    run_command \
+        pgsql_execute "select remote_id from lease4"
+    assert_eq 0 "${EXIT_CODE}" "lease4 is missing remote_id column. (expected status  code %d, returned %d)"
+}
+
+pgsql_upgrade_15_to_16_test() {
+    # Added allocator column to dhcp4_shared_network
+    run_command \
+        pgsql_execute "select allocator from dhcp4_shared_network"
+    assert_eq 0 "${EXIT_CODE}" "dhcp4_shared_network is missing allocator column. (expected status  code %d, returned %d)"
+
+    # Added allocator column to dhcp6_shared_network
+    run_command \
+        pgsql_execute "select allocator from dhcp6_shared_network"
+    assert_eq 0 "${EXIT_CODE}" "dhcp6_shared_network is missing allocator column. (expected status  code %d, returned %d)"
+
+    # Added pd_allocator column to dhcp6_shared_network
+    run_command \
+        pgsql_execute "select pd_allocator from dhcp6_shared_network"
+    assert_eq 0 "${EXIT_CODE}" "dhcp6_shared_network is missing pd_allocator column. (expected status  code %d, returned %d)"
+
+    # Added allocator column to dhcp4_subnet
+    run_command \
+        pgsql_execute "select allocator from dhcp4_subnet"
+    assert_eq 0 "${EXIT_CODE}" "dhcp4_subnet is missing allocator column. (expected status  code %d, returned %d)"
+
+    # Added allocator column to dhcp6_subnet
+    run_command \
+        pgsql_execute "select allocator from dhcp6_subnet"
+    assert_eq 0 "${EXIT_CODE}" "dhcp6_subnet is missing allocator column. (expected status  code %d, returned %d)"
+
+    # Added pd_allocator column to dhcp6_subnet
+    run_command \
+        pgsql_execute "select pd_allocator from dhcp6_subnet"
+    assert_eq 0 "${EXIT_CODE}" "dhcp6_subnet is missing pd_allocator column. (expected status  code %d, returned %d)"
+}
+
+pgsql_upgrade_16_to_17_test() {
+    # Added lease4_pool_stat table
+    run_command \
+        pgsql_execute "SELECT subnet_id, pool_id, state, leases FROM lease4_pool_stat"
+    assert_eq 0 "${EXIT_CODE}" "lease4_pool_stat table is missing or broken. (expected status code %d, returned %d)"
+
+    # Added lease6_pool_stat table
+    run_command \
+        pgsql_execute "SELECT subnet_id, pool_id, lease_type, state, leases FROM lease6_pool_stat"
+    assert_eq 0 "${EXIT_CODE}" "lease6_pool_stat table is missing or broken. (expected status code %d, returned %d)"
+
+    # Added lease6_relay_id table
+    run_command \
+        pgsql_execute "select extended_info_id, relay_id, lease_addr from lease6_relay_id"
+    assert_eq 0 "${EXIT_CODE}" "lease6_relay_id table is missing or broken. (expected status code %d, returned %d)"
+
+    # Added lease6_remote_id table
+    run_command \
+        pgsql_execute "select extended_info_id, remote_id, lease_addr from lease6_remote_id"
+    assert_eq 0 "${EXIT_CODE}" "lease6_remote_id table is missing or broken. (expected status code %d, returned %d)"
+}
+
+pgsql_upgrade_17_to_18_test() {
+    # Verify that lease6 address is binary.
+    qry="insert into lease6 (address,duid,prefix_len,lease_type,subnet_id) values(cast('3001::99' as inet),'18219',128,0,0);"
+    run_statement "lease6_insert" "$qry"
+
+    qry="select host(address) from lease6 where duid = '18219';"
+    run_statement "lease6_insert" "$qry" "3001::99"
+
+    # Verify that ipv6_reservations address is binary.
+    qry="\
+    insert into hosts(host_id, dhcp_identifier, dhcp_identifier_type) values (18219, '18219', 1); \
+    insert into ipv6_reservations (address, prefix_len, type, dhcp6_iaid, host_id) \
+        values (cast('3001::99' as inet), 128, 1, 123, 18219); \
+    select host(address) from ipv6_reservations where host_id = 18219;"
+
+    run_statement "ipv6_reservations_insert" "$qry" "3001::99"
+}
+
+pgsql_upgrade_18_to_19_test() {
+    # The function, pgsql_ddns_conflict_resolution_mode_update_test,
+    # is called explicitly and tests conversion of
+    # ddns-use-conflict-resolution to ddns-conflict-resolution-mode.
+
+    # Verify that lease6_relay_id lease_addr is binary.
+    qry="insert into lease6_relay_id(relay_id,lease_addr) values('18219',cast('3001::99' as inet));"
+    run_statement "lease6_relay_id_insert" "$qry"
+
+    qry="select host(lease_addr) from lease6_relay_id where relay_id = '18219';"
+    run_statement "lease6_relay_id_get" "$qry" "3001::99"
+
+    # Verify that lease6_remote_id lease_addr is binary.
+    qry="insert into lease6_remote_id(remote_id,lease_addr) values('18219',cast('3001::99' as inet));"
+    run_statement "lease6_remote_id_insert" "$qry"
+
+    qry="select host(lease_addr) from lease6_remote_id where remote_id = '18219';"
+    run_statement "lease6_remote_id_get" "$qry" "3001::99"
+}
+
+pgsql_upgrade_19_to_20_test() {
+    # Verify that lease6_by_subnet_id_address index on lease6 is keyed by
+    # attributes number 5 and 1 (i.e. subnet-id and address)
+    query="select ix.indkey as keys from pg_class t, pg_class i, pg_index ix \
+        where t.oid = ix.indrelid and i.oid = ix.indexrelid and \
+        i.relname = 'lease6_by_subnet_id_address' and t.relname = 'lease6';"
+    run_statement "verify lease6_by_subnet_id_address" "${query}"
+    assert_eq 0 "${EXIT_CODE}" "${query}: expected %d, returned %d"
+    assert_str_eq '5 1' "${OUTPUT}" "${query}: expected output %s, returned %s"
+}
+
+pgsql_upgrade_20_to_21_test() {
+    # Verify that dhcp4_server_modification_ts index on dhcp4_server is keyed by
+    # attribute number 4, modification_ts
+    query="select ix.indkey as keys from pg_class t, pg_class i, pg_index ix \
+        where t.oid = ix.indrelid and i.oid = ix.indexrelid and \
+        i.relname = 'dhcp4_server_modification_ts' and t.relname = 'dhcp4_server';"
+    run_statement "verify lease6_by_subnet_id_address" "${query}"
+    assert_eq 0 "${EXIT_CODE}" "${query}: expected %d, returned %d"
+    assert_str_eq '4' "${OUTPUT}" "${query}: expected output %s, returned %s"
+}
+
+pgsql_upgrade_22_to_23_test() {
+    query="SELECT name FROM lease_state WHERE state = 3"
+    run_command \
+        pgsql_execute "${query}"
+    assert_eq 0 "${EXIT_CODE}" "${query}: expected %d, returned %d"
+    assert_str_eq 'released' "${OUTPUT}" "${query}: expected output %s, returned %s"
+}
+
+pgsql_upgrade_23_to_24_test() {
+    query="SELECT COUNT(id) FROM option_def_data_type"
+    run_command \
+        pgsql_execute "${query}"
+    assert_eq 0 "${EXIT_CODE}" "${query}: expected %d, returned %d"
+    assert_str_eq '18' "${OUTPUT}" "${query}: expected output %s, returned %s"
+
+    query="select name from option_def_data_type where id = 0"
+    run_command \
+        pgsql_execute "${query}"
+    assert_eq 0 "${EXIT_CODE}" "${query}. (expected status code %d, returned %d)"
+    assert_str_eq 'empty' "${OUTPUT}" "${query}: expected output %s, returned %s"
+
+    query="select name from option_def_data_type where id = 1"
+    run_command \
+        pgsql_execute "${query}"
+    assert_eq 0 "${EXIT_CODE}" "${query}. (expected status code %d, returned %d)"
+    assert_str_eq 'binary' "${OUTPUT}" "${query}: expected output %s, returned %s"
+
+    query="select name from option_def_data_type where id = 2"
+    run_command \
+        pgsql_execute "${query}"
+    assert_eq 0 "${EXIT_CODE}" "${query}. (expected status code %d, returned %d)"
+    assert_str_eq 'boolean' "${OUTPUT}" "${query}: expected output %s, returned %s"
+
+    query="select name from option_def_data_type where id = 4"
+    run_command \
+        pgsql_execute "${query}"
+    assert_eq 0 "${EXIT_CODE}" "${query}. (expected status code %d, returned %d)"
+    assert_str_eq 'int16' "${OUTPUT}" "${query}: expected output %s, returned %s"
+
+    query="select name from option_def_data_type where id = 5"
+    run_command \
+        pgsql_execute "${query}"
+    assert_eq 0 "${EXIT_CODE}" "${query}. (expected status code %d, returned %d)"
+    assert_str_eq 'int32' "${OUTPUT}" "${query}: expected output %s, returned %s"
+
+    query="select name from option_def_data_type where id = 6"
+    run_command \
+        pgsql_execute "${query}"
+    assert_eq 0 "${EXIT_CODE}" "${query}. (expected status code %d, returned %d)"
+    assert_str_eq 'uint8' "${OUTPUT}" "${query}: expected output %s, returned %s"
+
+    query="select name from option_def_data_type where id = 7"
+    run_command \
+        pgsql_execute "${query}"
+    assert_eq 0 "${EXIT_CODE}" "${query}. (expected status code %d, returned %d)"
+    assert_str_eq 'uint16' "${OUTPUT}" "${query}: expected output %s, returned %s"
+
+    query="select name from option_def_data_type where id = 8"
+    run_command \
+        pgsql_execute "${query}"
+    assert_eq 0 "${EXIT_CODE}" "${query}. (expected status code %d, returned %d)"
+    assert_str_eq 'uint32' "${OUTPUT}" "${query}: expected output %s, returned %s"
+
+    query="select name from option_def_data_type where id = 10"
+    run_command \
+        pgsql_execute "${query}"
+    assert_eq 0 "${EXIT_CODE}" "${query}. (expected status code %d, returned %d)"
+    assert_str_eq 'ipv4-address' "${OUTPUT}" "${query}: expected output %s, returned %s"
+
+    query="select name from option_def_data_type where id = 11"
+    run_command \
+        pgsql_execute "${query}"
+    assert_eq 0 "${EXIT_CODE}" "${query}. (expected status code %d, returned %d)"
+    assert_str_eq 'ipv6-address' "${OUTPUT}" "${query}: expected output %s, returned %s"
+
+    query="select name from option_def_data_type where id = 12"
+    run_command \
+        pgsql_execute "${query}"
+    assert_eq 0 "${EXIT_CODE}" "${query}. (expected status code %d, returned %d)"
+    assert_str_eq 'ipv6-prefix' "${OUTPUT}" "${query}: expected output %s, returned %s"
+
+    query="select name from option_def_data_type where id = 13"
+    run_command \
+        pgsql_execute "${query}"
+    assert_eq 0 "${EXIT_CODE}" "${query}. (expected status code %d, returned %d)"
+    assert_str_eq 'psid' "${OUTPUT}" "${query}: expected output %s, returned %s"
+
+    query="select name from option_def_data_type where id = 14"
+    run_command \
+        pgsql_execute "${query}"
+    assert_eq 0 "${EXIT_CODE}" "${query}. (expected status code %d, returned %d)"
+    assert_str_eq 'string' "${OUTPUT}" "${query}: expected output %s, returned %s"
+
+    query="select name from option_def_data_type where id = 15"
+    run_command \
+        pgsql_execute "${query}"
+    assert_eq 0 "${EXIT_CODE}" "${query}. (expected status code %d, returned %d)"
+    assert_str_eq 'tuple' "${OUTPUT}" "${query}: expected output %s, returned %s"
+
+    query="select name from option_def_data_type where id = 16"
+    run_command \
+        pgsql_execute "${query}"
+    assert_eq 0 "${EXIT_CODE}" "${query}. (expected status code %d, returned %d)"
+    assert_str_eq 'fqdn' "${OUTPUT}" "${query}: expected output %s, returned %s"
+
+    query="select name from option_def_data_type where id = 17"
+    run_command \
+        pgsql_execute "${query}"
+    assert_eq 0 "${EXIT_CODE}" "${query}. (expected status code %d, returned %d)"
+    assert_str_eq 'internal' "${OUTPUT}" "${query}: expected output %s, returned %s"
+
+    query="select name from option_def_data_type where id = 254"
+    run_command \
+        pgsql_execute "${query}"
+    assert_eq 0 "${EXIT_CODE}" "${query}. (expected status code %d, returned %d)"
+    assert_str_eq 'record' "${OUTPUT}" "${query}: expected output %s, returned %s"
+}
+
+pgsql_upgrade_24_to_25_test() {
+    # Added excluded_prefix to ipv6_reservations
+    run_command \
+        pgsql_execute "select excluded_prefix from ipv6_reservations"
+    assert_eq 0 "${EXIT_CODE}" "ipv6_reservations is missing excluded_prefix column. (expected status code %d, returned %d)"
+    # Added excluded_prefix_len to ipv6_reservations
+    run_command \
+        pgsql_execute "select excluded_prefix_len from ipv6_reservations"
+    assert_eq 0 "${EXIT_CODE}" "ipv6_reservations is missing excluded_prefix_len column. (expected status code %d, returned %d)"
+}
+
+pgsql_upgrade_25_to_26_test() {
+    qry="select name from option_def_data_type where id = 3"
+    run_command \
+        pgsql_execute "${qry}"
+    assert_eq 0 "${EXIT_CODE}" "${qry}. (expected status code %d, returned %d)"
+    assert_str_eq 'int8' "${OUTPUT}" "${qry}: expected output %s, returned %s"
+
+    # client_classes been added to dhcp4_options
+    check_table_column client_classes dhcp4_options
+
+    # client_classes been added to dhcp6_options
+    check_table_column client_classes dhcp6_options
+
+    # check rename of require_client_classes to evaluate_additional_classes.
+    check_table_column evaluate_additional_classes dhcp4_shared_network
+    check_table_column evaluate_additional_classes dhcp4_subnet
+    check_table_column evaluate_additional_classes dhcp4_pool
+    check_table_column evaluate_additional_classes dhcp6_shared_network
+    check_table_column evaluate_additional_classes dhcp6_subnet
+    check_table_column evaluate_additional_classes dhcp6_pool
+    check_table_column evaluate_additional_classes dhcp6_pd_pool
+
+    # check rename of only_if_required to only_in_additional_list.
+    check_table_column only_in_additional_list dhcp4_client_class
+    check_table_column only_in_additional_list dhcp6_client_class
+}
+
+pgsql_upgrade_26_to_27_test() {
+    # check client_class has become client_classes.
+    check_table_column client_classes dhcp4_shared_network
+    check_table_column client_classes dhcp4_subnet
+    check_table_column client_classes dhcp4_pool
+    check_table_column client_classes dhcp6_shared_network
+    check_table_column client_classes dhcp6_subnet
+    check_table_column client_classes dhcp6_pool
+    check_table_column client_classes dhcp6_pd_pool
+}
+
+pgsql_upgrade_27_to_28_test() {
+
+    # check ddns ttl fields were added to dhcp4_shared_network
+    check_table_column ddns_ttl_percent dhcp4_shared_network
+    check_table_column ddns_ttl dhcp4_shared_network
+    check_table_column ddns_ttl_min dhcp4_shared_network
+    check_table_column ddns_ttl_max dhcp4_shared_network
+
+    # check ddns ttl fields were added to dhcp4_subnet
+    check_table_column ddns_ttl_percent dhcp4_subnet
+    check_table_column ddns_ttl dhcp4_subnet
+    check_table_column ddns_ttl_min dhcp4_subnet
+    check_table_column ddns_ttl_max dhcp4_subnet
+
+    # check ddns ttl fields were added to dhcp6_shared_network
+    check_table_column ddns_ttl_percent dhcp6_shared_network
+    check_table_column ddns_ttl dhcp6_shared_network
+    check_table_column ddns_ttl_min dhcp6_shared_network
+    check_table_column ddns_ttl_max dhcp6_shared_network
+
+    # check ddns ttl fields were added to dhcp6_subnet
+    check_table_column ddns_ttl_percent dhcp6_subnet
+    check_table_column ddns_ttl dhcp6_subnet
+    check_table_column ddns_ttl_min dhcp6_subnet
+    check_table_column ddns_ttl_max dhcp6_subnet
+}
+
+pgsql_upgrade_28_to_29_test() {
+
+    # check registered was added tp lease_state
+    query="SELECT name FROM lease_state WHERE state = 4"
+    run_command \
+        pgsql_execute "${query}"
+    assert_eq 0 "${EXIT_CODE}" "${query}: expected %d, returned %d"
+    assert_str_eq 'registered' "${OUTPUT}" "${query}: expected output %s, returned %s"
+}
+
+pgsql_upgrade_29_to_30_test() {
+    # Check dhcp4_options.client_classes now needs a value
+    qry="SELECT set_config('kea.disable_audit', 'true', false);\
+        INSERT INTO dhcp4_options (scope_id, code, space, formatted_value, modification_ts) \
+        VALUES (0, '223', 'dhcp4', 'foo' , current_timestamp );";
+
+    # Should fail with "# ERROR:  null value in column "client_classes" of relation "dhcp4_options"
+    # violates not-null constraint"
+    run_command \
+        pgsql_execute "${qry}"
+    assert_eq 3 "${EXIT_CODE}" "${qry}: expected %d, returned %d"
+
+    # Check dhcp6_options.client_classes now needs a value
+    qry="SELECT set_config('kea.disable_audit', 'true', false);\
+        INSERT INTO dhcp6_options (scope_id, code, space, formatted_value, modification_ts) \
+        VALUES (0, '223', 'dhcp6', 'foo' , current_timestamp );";
+
+    # Should fail with "# ERROR:  null value in column "client_classes" of relation "dhcp6_options"
+    # violates not-null constraint"
+    run_command \
+        pgsql_execute "${qry}"
+    assert_eq 3 "${EXIT_CODE}" "${qry}: expected %d, returned %d"
+}
+
+pgsql_upgrade_30_to_31_test() {
+    # Check that the lease6_by_hwaddr index was added to the lease6 table.
+    qry="select count(*) from pg_indexes where indexname='lease6_by_hwaddr' and tablename='lease6';"
+    run_command \
+        pgsql_execute "${qry}"
+    assert_eq 0 "${EXIT_CODE}" "select from pg_indexes failed. (expected status code %d, returned %d)"
+    assert_eq 1 "${OUTPUT}" "pg_indexes does not contain entry for lease6_by_hwaddr index in lease6 table. (record count %d, expected %d)"
+}
+
+pgsql_upgrade_31_to_32_test() {
+    # Check that the lease4_by_state index was added to the lease4 table.
+    qry="select count(*) from pg_indexes where indexname='lease4_by_state' and tablename='lease4';"
+    run_command \
+        pgsql_execute "${qry}"
+    assert_eq 0 "${EXIT_CODE}" "select from pg_indexes failed. (expected status code %d, returned %d)"
+    assert_eq 1 "${OUTPUT}" "pg_indexes does not contain entry for lease4_by_state index in lease4 table. (record count %d, expected %d)"
+
+    # Check that the lease6_by_state index was added to the lease6 table.
+    qry="select count(*) from pg_indexes where indexname='lease6_by_state' and tablename='lease6';"
+    run_command \
+        pgsql_execute "${qry}"
+    assert_eq 0 "${EXIT_CODE}" "select from pg_indexes failed. (expected status code %d, returned %d)"
+    assert_eq 1 "${OUTPUT}" "pg_indexes does not contain entry for lease6_by_state index in lease6 table. (record count %d, expected %d)"
+}
+
+pgsql_upgrade_32_to_33_test() {
+    # Check that isJsonSupported() is gone.
+    qry="select isJsonSupported();"
+    run_command \
+        pgsql_execute "${qry}"
+    assert_eq 3 "${EXIT_CODE}" "select isJsonSupported() should have failed. (expected status code %d, returned %d)"
+
+    # Make sure all four SFLQ tables exist.
+    check_table_column start_address flq_pool4
+    check_table_column address free_lease4
+    check_table_column start_address flq_pool6
+    check_table_column address free_lease4
+
+    # Verify incrementV6Prefix.
+    qry="select incrementV6Prefix('\x10203040506070FF90A0B0C00DE0F000'::bytea, 64::smallint)"
+    run_command \
+        pgsql_execute "${qry}"
+    assert_eq 0 "${EXIT_CODE}" "select incrementV6Prefix failed. (expected status code %d, returned %d)"
+    assert_str_eq '\x102030405060710090a0b0c00de0f000' "${OUTPUT}"
+
+
+    # Verify sflqCreateFlqPool4.
+    start_address="('127.0.0.0'::inet - '0.0.0.0'::inet)"
+    end_address="('127.0.0.10'::inet - '0.0.0.0'::inet)"
+
+    qry="select sflqCreateFlqPool4($start_address, $end_address, 1::bigint, false)"
+    run_command \
+        pgsql_execute "${qry}"
+    assert_eq 0 "${EXIT_CODE}" "select sflqCreateFlqPool4 failed. (expected status code %d, returned %d)"
+
+    qry="select count(start_address) from flq_pool4 where start_address = $start_address\
+         and end_address = $end_address"
+    run_command \
+        pgsql_execute "${qry}"
+    assert_eq 0 "${EXIT_CODE}" "select from flq_pool4 failed. (expected status code %d, returned %d)"
+    count="${OUTPUT}"
+    assert_eq 1 "${count}" "flq_pool4 content wrong. (expected count %d, actual %d)"
+
+    qry="select count(free_lease4.address) from free_lease4 join flq_pool4 on\
+         flq_pool4.subnet_id = 1::bigint where (free_lease4.address >= flq_pool4.start_address\
+         and free_lease4.address <= flq_pool4.end_address)"
+    run_command \
+        pgsql_execute "${qry}"
+    assert_eq 0 "${EXIT_CODE}" "select from free_lease4 failed. (expected status code %d, returned %d)"
+    count="${OUTPUT}"
+    assert_eq 11 "${count}" "free_lease4 content wrong. (expected count %d, actual %d)"
+
+    # Verify sflqPickFreeLease4.
+    qry="select '0.0.0.0'::inet + sflqPickFreeLease4($start_address, $end_address)"
+    run_command \
+        pgsql_execute "${qry}"
+    assert_eq 0 "${EXIT_CODE}" "select from sflqPickFreeLease4 failed. (expected status code %d, returned %d)"
+    assert_str_eq '127.0.0.0' "${OUTPUT}"
+
+    # Verify sflqCreateFlqPool6.
+    qry="select sflqCreateFlqPool6('3001::'::inet, '3001::10'::inet, 2::smallint, 128::smallint,\
+                                   1::bigint, false)"
+    run_command \
+        pgsql_execute "${qry}"
+    assert_eq 0 "${EXIT_CODE}" "select sflqCreateFlqPool6 failed. (expected status code %d, returned %d)"
+
+    qry="select count(start_address) from flq_pool6 where start_address = '3001::'::inet\
+         and end_address = '3001::10'::inet"
+    run_command \
+        pgsql_execute "${qry}"
+    assert_eq 0 "${EXIT_CODE}" "select from flq_pool6 failed. (expected status code %d, returned %d)"
+    count="${OUTPUT}"
+    assert_eq 1 "${count}" "flq_pool6 content wrong. (expected count %d, actual %d)"
+
+    qry="select count(free_lease6.address) from free_lease6 join flq_pool6 on\
+         flq_pool6.subnet_id = 1::bigint where (free_lease6.address >= flq_pool6.start_address\
+         and free_lease6.address <= flq_pool6.end_address)"
+    run_command \
+        pgsql_execute "${qry}"
+    assert_eq 0 "${EXIT_CODE}" "select from free_lease6 failed. (expected status code %d, returned %d)"
+    count="${OUTPUT}"
+    assert_eq 17 "${count}" "flq_pool6 content wrong. (expected count %d, actual %d)"
+
+    # Verify sflqPickFreeLease6.
+    qry="select sflqPickFreeLease6('3001::'::inet, '3001::10'::inet)"
+    run_command \
+        pgsql_execute "${qry}"
+    assert_eq 0 "${EXIT_CODE}" "select from sflqPickFreeLease6 failed. (expected status code %d, returned %d)"
+    assert_str_eq '3001::' "${OUTPUT}"
+}
+
+pgsql_upgrade_33_to_34_test() {
+    qry="DELETE from lease6; DELETE from flq_pool6; DELETE from free_lease6"
+    run_statement "Pre-test deletes" "${qry}"
+
+    # Steps 1 - 3 Verifies updated recreate on delegated_len change logic.
+
+    # Step 1 - create and verify an NA pool.
+    qry="SELECT sflqCreateFlqPool6('3001::'::inet, '3001::ffff'::inet,\
+                                   0::smallint, 128::smallint, 1::bigint, 'f')"
+    run_statement "Step 1.1" "${qry}"
+
+    qry="SELECT count(*) from flq_pool6 where start_address = '3001::' AND delegated_len = 128"
+    run_statement "Step 1.2" "${qry}" "1"
+
+    qry="SELECT count(*) from free_lease6"
+    run_statement "Step 1.3" "${qry}" "65536"
+
+    # Step 2 - set recreate to true and call create again.
+    qry="DELETE from free_lease6"
+    run_statement "Step 2.1" "${qry}"
+
+    qry="SELECT sflqCreateFlqPool6('3001::'::inet, '3001::ffff'::inet,\
+                                   0::smallint, 128::smallint, 1::bigint, 't')"
+    run_statement "Step 2.2." "${qry}"
+
+    qry="SELECT count(*) from free_lease6"
+    run_statement "Step 2.3" "${qry}" "65536"
+
+    # Step 3 - call create with different delegated_len.
+    qry="SELECT sflqCreateFlqPool6('3001::'::inet, '3001::ffff'::inet,\
+                                   0::smallint, 127::smallint, 1::bigint, 'f')"
+    run_statement "Step 3.1" "${qry}"
+
+    qry="SELECT count(*) from free_lease6"
+    run_statement "Step 3.2" "${qry}" '32768'
+
+    # Step 4 - Verifies that MySQL does not have the one too many prefixes issue.
+    qry="DELETE from flq_pool6;DELETE from free_lease6"
+    run_statement "Step 4.1" "${qry}"
+
+    qry="SELECT sflqCreateFlqPool6('2001::fff0'::inet, '2001::ffff'::inet,\
+                                   2::smallint, 128::smallint, 1::bigint, 'f')"
+    run_statement "Step 4.2" "${qry}"
+
+    # Verify free_lease6 has only the expected addresses.
+    sql="SELECT count(bin_address) from free_lease6 \
+            where bin_address >= inetToBytea('2001::fff0'::inet) \
+            and bin_address <= inetToBytea('2001::ffff'::inet)"
+    run_statement "Step 4.3" "$sql" "16"
+
+    sql="SELECT count(bin_address) from free_lease6"
+    run_statement "Step 4.4 failed" "$sql" "16"
+
+    # Verify type IA_TA type was deleted.
+    qry="select count(lease_type) from lease6_types where lease_type = 1 OR name='IA_TA'"
+    run_statement "Check lease6_types" "${qry}" "0"
+
+    qry="DELETE from lease6; DELETE from flq_pool6; DELETE from free_lease6"
+    run_statement "Post-test deletes" "${qry}"
+}
+
+pgsql_upgrade_test() {
+    test_start "pgsql.upgrade"
+
+    # Let's wipe the whole database
+    pgsql_wipe
+
+    # Initialize database to schema 1.0.
+    run_command \
+        pgsql_execute_script "@abs_top_srcdir@/src/bin/admin/tests/dhcpdb_create_1.0.pgsql"
+    assert_eq 0 "${EXIT_CODE}" "cannot initialize the database, expected exit code: %d, actual: %d"
+
+    # Let's upgrade it to the latest version.
+    run_command \
+        "${kea_admin}" db-upgrade pgsql -u "${db_user}" -p "${db_password}" -n "${db_name}" -d "${db_scripts_dir}"
+    assert_eq 0 "${EXIT_CODE}" "db-upgrade failed, expected exit code: %d, actual: %d"
+
+    # Verify upgraded schema reports the latest version.
+    version=$("${kea_admin}" db-version pgsql -u "${db_user}" -p "${db_password}" -n "${db_name}" -d "${db_scripts_dir}")
+    assert_str_eq "34.0" "${version}" 'Expected kea-admin to return %s, returned value was %s'
+
+    # Check 1.0 to 2.0 upgrade
+    pgsql_upgrade_1_0_to_2_0_test
+
+    # Check 2.0 to 3.0 upgrade
+    pgsql_upgrade_2_0_to_3_0_test
+
+    # Check 3.0 to 6.1 upgrade
+    pgsql_upgrade_3_0_to_6_1_test
+
+    # Check 6.1 to 6.2 upgrade
+    pgsql_upgrade_6_1_to_6_2_test
+
+    # Check 6.2 to 7.0 upgrade
+    pgsql_upgrade_6_2_to_7_0_test
+
+    # Check 7.0 to 8.0 upgrade
+    pgsql_upgrade_7_0_to_8_0_test
+
+    # Check 8.0 to 9.0 upgrade
+    pgsql_upgrade_8_0_to_9_0_test
+
+    # Check 9.0 to 10 upgrade
+    pgsql_upgrade_9_0_to_10_test
+
+    # Check 10.0 to 11.0 upgrade
+    pgsql_upgrade_10_to_11_test
+
+    # Check 11.0 to 12.0 upgrade
+    pgsql_upgrade_11_to_12_test
+
+    # Check 12.0 to 13.0 upgrade
+    pgsql_upgrade_12_to_13_test
+
+    # Check 13.0 to 14.0 upgrade
+    pgsql_upgrade_13_to_14_test
+
+    # Check 14.0 to 15.0 upgrade
+    pgsql_upgrade_14_to_15_test
+
+    # Check 15 to 16 upgrade
+    pgsql_upgrade_15_to_16_test
+
+    # Check 16 to 17 upgrade
+    pgsql_upgrade_16_to_17_test
+
+    # Check 17 to 18 upgrade
+    pgsql_upgrade_17_to_18_test
+
+    # Check 18 to 19 upgrade
+    pgsql_upgrade_18_to_19_test
+
+    # Check 19 to 20 upgrade
+    pgsql_upgrade_19_to_20_test
+
+    # Check 20 to 21 upgrade
+    pgsql_upgrade_20_to_21_test
+
+    # Check 22 to 23 upgrade
+    pgsql_upgrade_22_to_23_test
+
+    # Check 23 to 24 upgrade
+    pgsql_upgrade_23_to_24_test
+
+    # Check 24 to 25 upgrade
+    pgsql_upgrade_24_to_25_test
+
+    # Check 25 to 26 upgrade
+    pgsql_upgrade_25_to_26_test
+
+    # Check 26 to 27 upgrade
+    pgsql_upgrade_26_to_27_test
+
+    # Check 27 to 28 upgrade
+    pgsql_upgrade_27_to_28_test
+
+    # Check 28 to 29 upgrade
+    pgsql_upgrade_28_to_29_test
+
+    # Check 29 to 30 upgrade
+    pgsql_upgrade_29_to_30_test
+
+    # Check 30 to 31 upgrade
+    pgsql_upgrade_30_to_31_test
+
+    # Check 31 to 32 upgrade
+    pgsql_upgrade_31_to_32_test
+
+    # Check 32 to 33 upgrade
+    pgsql_upgrade_32_to_33_test
+
+    # Check 33 to 34 upgrade
+    pgsql_upgrade_33_to_34_test
+
+    # Let's wipe the whole database
+    pgsql_wipe
+
+    test_finish 0
+}
+
+# Test verifies the ability to dump lease4 data to CSV file
+# The dump output file is compared against a reference file.
+# If the dump is successful, the file contents will be the
+# same.  Note that the expire field in the lease4 table
+# is of data type "timestamp with timezone". This means that
+# the dumped file content is dependent upon the timezone
+# setting the PostgreSQL server is using.  To account for
+# this the reference data contains a tag, "<timestamp>"
+# where the expire column's data would normally be. This
+# tag is replaced during text execution with a value
+# determined by querying the PostgreSQL server.  This
+# updated reference data is captured in a temporary file
+# which is used for the actual comparison.
+# May accept additional parameters to be passed to lease-dump.
+pgsql_lease4_dump_test() {
+    test_start "pgsql.lease4_dump_test"
+
+    test_dir="@abs_top_srcdir@/src/bin/admin/tests"
+    output_dir="@abs_top_builddir@/src/bin/admin/tests"
+
+    output_file="$output_dir/data/pgsql.lease4_dump_test.output.csv"
+    ref_file="$test_dir/data/lease4_dump_test.reference.csv"
+
+    # Clean up any test files left from prior failed runs unless -y was provided in which case
+    # explicitly create the file to check that it will be automatically deleted.
+    # files should be removed by kea-admin itself.
+    if printf '%s' "$@" | grep 'y' > /dev/null; then
+        touch "${output_file}"
+        touch "${output_file}.tmp"
+    else
+        rm -f "${output_file}"
+        rm -f "${output_file}.tmp"
+    fi
+
+    # Let's wipe the whole database
+    pgsql_wipe
+
+    # Ok, now let's initialize the database
+    run_command \
+        "${kea_admin}" db-init pgsql -u "${db_user}" -p "${db_password}" -n "${db_name}" -d "${db_scripts_dir}"
+    assert_eq 0 "${EXIT_CODE}" "could not create database, expected exit code %d, actual %d"
+
+    # Insert the reference records. Normally, for the bytea values, you would have two backslashes.
+    # Because shell evaluates the double quoted string one more time, they need to be doubled.
+    # Otherwise, the value is interpreted as ASCII instead of raw bytes.
+    insert_sql="\
+insert into lease4 values(10,E'\\\\x3230',E'\\\\x3330',40,TO_TIMESTAMP(1642000000),50,'t','t','one.example.com',0,'');\
+insert into lease4 values(11,'',E'\\\\x313233',40,TO_TIMESTAMP(1643210000),50,'t','t','',1,'{  }');\
+insert into lease4 values(12,E'\\\\x3232','',40,TO_TIMESTAMP(1643212345),50,'t','t','three,example,com',2,'{ \"a\": 1, \"b\": \"c\" }')"
+
+    run_command \
+        pgsql_execute "$insert_sql"
+    assert_eq 0 "${EXIT_CODE}" "insert into lease4 failed, expected exit code %d, actual %d"
+
+    # Dump lease4 to output_file
+    run_command \
+        "${kea_admin}" lease-dump pgsql -4 -u "${db_user}" -p "${db_password}" -n "${db_name}" \
+            -d "${db_scripts_dir}" -o "${output_file}" "$@"
+    assert_eq 0 "${EXIT_CODE}" "kea-admin lease-dump -4 failed, expected exit code %d, actual %d"
+
+    # Compare the dump output to reference file, they should be identical
+    run_command \
+        cmp -s "${output_file}" "${ref_file}"
+    assert_eq 0 "${EXIT_CODE}" "dump file does not match reference file, expected exit code %d, actual %d, diff:\n$(diff "${ref_file}" "${output_file}")"
+
+    # Remove the files.
+    rm -f "${output_file}"
+    rm -f "${output_file}.tmp"
+
+    # Let's wipe the whole database
+    pgsql_wipe
+
+    test_finish 0
+}
+
+# Test verifies the ability to dump lease6 data to CSV file
+# The dump output file is compared against a reference file.
+# If the dump is successful, the file contents will be the
+# same.  Note that the expire field in the lease6 table
+# is of data type "timestamp with timezone". This means that
+# the dumped file content is dependent upon the timezone
+# setting the PostgreSQL server is using.  To account for
+# this the reference data contains a tag, "<timestamp>"
+# where the expire column's data would normally be. This
+# tag is replaced during text execution with a value
+# determined by querying the PostgreSQL server.  This
+# updated reference data is captured in a temporary file
+# which is used for the actual comparison.
+pgsql_lease6_dump_test() {
+    test_start "pgsql.lease6_dump_test"
+
+    test_dir="@abs_top_srcdir@/src/bin/admin/tests"
+    output_dir="@abs_top_builddir@/src/bin/admin/tests"
+
+    output_file="$output_dir/data/pgsql.lease6_dump_test.output.csv"
+    ref_file="$test_dir/data/lease6_dump_test.reference.csv"
+
+    # Clean up any test files left from prior failed runs unless -y was provided in which case
+    # explicitly create the file to check that it will be automatically deleted.
+    # files should be removed by kea-admin itself.
+    if printf '%s' "$@" | grep 'y' > /dev/null; then
+        touch "${output_file}"
+        touch "${output_file}.tmp"
+    else
+        rm -f "${output_file}"
+        rm -f "${output_file}.tmp"
+    fi
+
+    # Let's wipe the whole database
+    pgsql_wipe
+
+    # Ok, now let's initialize the database
+    run_command \
+        "${kea_admin}" db-init pgsql -u "${db_user}" -p "${db_password}" -n "${db_name}" -d "${db_scripts_dir}"
+    assert_eq 0 "${EXIT_CODE}" "could not create database,  status code %d"
+
+    # Insert the reference records. Normally, for the bytea values, you would have two backslashes.
+    # Because shell evaluates the double quoted string one more time, they need to be doubled.
+    # Otherwise, the value is interpreted as ASCII instead of raw bytes.
+    insert_sql="\
+insert into lease6 values(cast('::10' as inet),E'\\\\x323033',30,TO_TIMESTAMP(1642000000),40,50,0,60,128,'t','t','one.example.com',0,decode(encode('80','hex'),'hex'),90,16,'',0); \
+insert into lease6 values(cast('::11' as inet),E'\\\\x323133',30,TO_TIMESTAMP(1643210000),40,50,0,60,128,'t','t','',1,decode(encode('80','hex'),'hex'),90,1,'{  }',0); \
+insert into lease6 values(cast('::12' as inet),E'\\\\x323233',30,TO_TIMESTAMP(1643212345),40,50,0,60,128,'t','t','three,example,com',2,decode(encode('80','hex'),'hex'),90,4,'{ \"a\": 1, \"b\": \"c\" }',0)"
+
+    run_command \
+        pgsql_execute "$insert_sql"
+    assert_eq 0 "${EXIT_CODE}" "insert into lease6 failed, expected exit code %d, actual %d"
+
+    # Dump lease6 to output_file
+    run_command \
+        "${kea_admin}" lease-dump pgsql -6 -u "${db_user}" -p "${db_password}" -n "${db_name}" \
+            -d "${db_scripts_dir}" -o "${output_file}" "$@"
+    assert_eq 0 "${EXIT_CODE}" "kea-admin lease-dump -6 failed, expected exit code %d, actual %d"
+
+    # Compare the dump output to reference file, they should be identical
+    run_command \
+        cmp -s "${output_file}" "${ref_file}"
+    assert_eq 0 "${EXIT_CODE}" "dump file does not match reference file, expected exit code %d, actual %d, diff:\n$(diff "${ref_file}" "${output_file}")"
+
+    # Remove the files.
+    rm -f "${output_file}"
+    rm -f "${output_file}.tmp"
+
+    # Let's wipe the whole database
+    pgsql_wipe
+
+    test_finish 0
+}
+
+# May accept additional parameters to be passed to lease-dump or to lease-upload.
+pgsql_lease4_upload_test() {
+    test_start "pgsql.lease4_upload_test"
+
+    input_file="@abs_top_srcdir@/src/bin/admin/tests/data/lease4_dump_test.reference.csv"
+    input_file_cp="@abs_top_builddir@/src/bin/admin/tests/data/lease4_dump_test.reference.csv"
+    output_file="@abs_top_builddir@/src/bin/admin/tests/data/lease4_dump_test.output.csv"
+
+    if [ "${input_file}" != "${input_file_cp}" ]; then
+        cp -f ${input_file} ${input_file_cp}
+        input_file=${input_file_cp}
+        input_file_cp=""
+    fi
+
+    # Let's wipe the whole database.
+    pgsql_wipe
+
+    # Clean up any test files left from prior failed runs unless -y was provided in which case
+    # explicitly create the file to check that it will be automatically deleted.
+    # files should be removed by kea-admin itself.
+    if printf '%s' "$@" | grep 'y' > /dev/null; then
+        touch "${input_file}.tmp"
+        touch "${output_file}"
+        touch "${output_file}.tmp"
+    else
+        rm -f "${input_file}.tmp"
+        rm -f "${output_file}"
+        rm -f "${output_file}.tmp"
+    fi
+
+    # Initialize the database.
+    run_command \
+        "${kea_admin}" db-init pgsql -u "${db_user}" -p "${db_password}" \
+            -n "${db_name}" -d "${db_scripts_dir}"
+    assert_eq 0 "${EXIT_CODE}" "could not create database, expected exit code %d, actual %d"
+
+    # Upload leases.
+    run_command \
+        "${kea_admin}" lease-upload pgsql -4 -u "${db_user}" \
+            -p "${db_password}" -n "${db_name}" -d "${db_scripts_dir}" \
+            -i "${input_file}" "$@"
+    assert_eq 0 "${EXIT_CODE}" "kea-admin lease-upload -4 failed, expected exit code %d, actual %d"
+
+    # Dump leases.
+    run_command \
+        "${kea_admin}" lease-dump pgsql -4 -u "${db_user}" \
+            -p "${db_password}" -n "${db_name}" -d "${db_scripts_dir}" \
+            -o "${output_file}" "$@"
+    assert_eq 0 "${EXIT_CODE}" "kea-admin lease-dump -4 failed, expected exit code %d, actual %d"
+
+    # Compare the initial file used for upload to the file retrieved from dump, they should be identical.
+    run_command \
+        cmp -s "${input_file}" "${output_file}"
+    assert_eq 0 "${EXIT_CODE}" "file resulted from dump after upload does not match file used for upload, expected exit code %d, actual %d, diff:\n$(diff "${input_file}" "${output_file}")"
+
+    # Remove the files.
+    if [ "${input_file}" != "${input_file_cp}" ]; then
+        rm -f "${input_file}"
+    fi
+    rm -f "${input_file}.tmp"
+    rm -f "${output_file}"
+    rm -f "${output_file}.tmp"
+
+    # Let's wipe the whole database.
+    pgsql_wipe
+
+    test_finish 0
+}
+
+pgsql_lease6_upload_test() {
+    test_start "pgsql.lease6_upload_test"
+
+    input_file="@abs_top_srcdir@/src/bin/admin/tests/data/lease6_dump_test.reference.csv"
+    input_file_cp="@abs_top_builddir@/src/bin/admin/tests/data/lease6_dump_test.reference.csv"
+    output_file="@abs_top_builddir@/src/bin/admin/tests/data/lease6_dump_test.output.csv"
+
+    if [ "${input_file}" != "${input_file_cp}" ]; then
+        cp -f ${input_file} ${input_file_cp}
+        input_file=${input_file_cp}
+        input_file_cp=""
+    fi
+
+    # Let's wipe the whole database.
+    pgsql_wipe
+
+    # Clean up any test files left from prior failed runs unless -y was provided in which case
+    # explicitly create the file to check that it will be automatically deleted.
+    # files should be removed by kea-admin itself.
+    if printf '%s' "$@" | grep 'y' > /dev/null; then
+        touch "${input_file}.tmp"
+        touch "${output_file}"
+        touch "${output_file}.tmp"
+    else
+        rm -f "${input_file}.tmp"
+        rm -f "${output_file}"
+        rm -f "${output_file}.tmp"
+    fi
+
+    # Initialize the database.
+    run_command \
+        "${kea_admin}" db-init pgsql -u "${db_user}" -p "${db_password}" \
+            -n "${db_name}" -d "${db_scripts_dir}"
+    assert_eq 0 "${EXIT_CODE}" "could not create database, expected exit code %d, actual %d"
+
+    # Upload leases.
+    run_command \
+        "${kea_admin}" lease-upload pgsql -6 -u "${db_user}" \
+            -p "${db_password}" -n "${db_name}" -d "${db_scripts_dir}" \
+            -i "${input_file}" "$@"
+    assert_eq 0 "${EXIT_CODE}" "kea-admin lease-upload -6 failed, expected exit code %d, actual %d"
+
+    # Dump leases.
+    run_command \
+        "${kea_admin}" lease-dump pgsql -6 -u "${db_user}" \
+            -p "${db_password}" -n "${db_name}" -d "${db_scripts_dir}" \
+            -o "${output_file}" "$@"
+    assert_eq 0 "${EXIT_CODE}" "kea-admin lease-dump -6 failed, expected exit code %d, actual %d"
+
+    # Compare the initial file used for upload to the file retrieved from dump, they should be identical.
+    run_command \
+        cmp -s "${input_file}" "${output_file}"
+    assert_eq 0 "${EXIT_CODE}" "file resulted from dump after upload does not match file used for upload, expected exit code %d, actual %d, diff:\n$(diff "${input_file}" "${output_file}")"
+
+    # Remove the files.
+    if [ "${input_file}" != "${input_file_cp}" ]; then
+        rm -f "${input_file}"
+    fi
+    rm -f "${input_file}.tmp"
+    rm -f "${output_file}"
+    rm -f "${output_file}.tmp"
+
+    # Let's wipe the whole database.
+    pgsql_wipe
+
+    test_finish 0
+}
+
+# Upgrades an existing schema to a target newer version
+# param target_version - desired schema version as "major.minor"
+pgsql_upgrade_schema_to_version() {
+    target_version=$1
+
+    upgrade_scripts_dir=${db_scripts_dir}/pgsql
+
+    # Check if the scripts directory exists at all.
+    if [ ! -d ${upgrade_scripts_dir} ]; then
+        log_error "Invalid scripts directory: ${upgrade_scripts_dir}"
+        exit 1
+    fi
+
+    # Check if there are any files in it
+    num_files=$(find ${upgrade_scripts_dir} -name 'upgrade*.sh' -type f | wc -l)
+    if [ "${num_files}" -eq 0 ]; then
+        upgrade_scripts_dir=@abs_top_builddir@/src/share/database/scripts/pgsql
+
+        # Check if the scripts directory exists at all.
+        if [ ! -d ${upgrade_scripts_dir} ]; then
+            log_error "Invalid scripts directory: ${upgrade_scripts_dir}"
+            exit 1
+        fi
+
+        # Check if there are any files in it
+        num_files=$(find "${upgrade_scripts_dir}" -name 'upgrade*.sh' -type f | wc -l)
+    fi
+
+    if [ "${num_files}" -eq 0 ]; then
+        log_error "No scripts in ${upgrade_scripts_dir}?"
+        exit 1
+    fi
+
+    # Postgres psql does not accept pw on command line, but can do it
+    # thru an env
+    export PGPASSWORD="${db_password}"
+
+    for script in "${upgrade_scripts_dir}"/upgrade*.sh
+    do
+        version=$(pgsql_version)
+        if [ "${version}" = "${target_version}" ]
+        then
+            break
+        fi
+
+        echo "Processing $script file..."
+        "${script}" -U "${db_user}" -d "${db_name}"
+    done
+
+    echo "Schema upgraded to $version"
+}
+
+# Verifies lease4_stat trigger operations on
+# an new, empty database.  It inserts, updates, and
+# deletes various leases, checking lease4_stat
+# values along the way.
+pgsql_lease4_stat_test() {
+    test_start "pgsql.lease4_stat_test"
+
+    # Let's wipe the whole database
+    pgsql_wipe
+
+    # Ok, now let's initialize the database
+    run_command \
+        "${kea_admin}" db-init pgsql -u "${db_user}" -p "${db_password}" -n "${db_name}" -d "${db_scripts_dir}"
+    assert_eq 0 "${EXIT_CODE}" "kea-admin db-init pgsql failed, expected %d, returned non-zero status code %d"
+
+    # Verify lease4 stat table is present
+    qry="select count(subnet_id) from lease4_stat"
+    run_statement "#1" "$qry" 0
+
+    # Insert lease4
+    qry="insert into lease4 (address, subnet_id, state) values (111,1,0)"
+    run_statement "#2" "$qry"
+
+    # Assigned state count should be 1
+    qry="select leases from lease4_stat where subnet_id = 1 and state = 0"
+    run_statement "#3" "$qry" 1
+
+    # Assigned state count should be 1
+    qry="select leases from lease4_pool_stat where subnet_id = 1 and pool_id = 0 and state = 0"
+    run_statement "#4" "$qry" 1
+
+    # Set lease state to declined
+    qry="update lease4 set state = 1 where address = 111"
+    run_statement "#5" "$qry"
+
+    # Leases state count for assigned should be 0
+    qry="select leases from lease4_stat where subnet_id = 1 and state = 0"
+    run_statement "#6" "$qry" 0
+
+    # Leases state count for assigned should be 0
+    qry="select leases from lease4_pool_stat where subnet_id = 1 and pool_id = 0 and state = 0"
+    run_statement "#7" "$qry" 0
+
+    # Leases state count for declined should be 1
+    qry="select leases from lease4_stat where subnet_id = 1 and state = 1"
+    run_statement "#8" "$qry" 1
+
+    # Leases state count for declined should be 1
+    qry="select leases from lease4_pool_stat where subnet_id = 1 and pool_id = 0 and state = 1"
+    run_statement "#9" "$qry" 1
+
+    # Delete the lease
+    qry="delete from lease4 where address = 111"
+    run_statement "#10" "$qry"
+
+    # Leases state count for declined should be 0
+    qry="select leases from lease4_stat where subnet_id = 1 and state = 1"
+    run_statement "#11" "$qry" 0
+
+    # Leases state count for declined should be 0
+    qry="select leases from lease4_pool_stat where subnet_id = 1 and pool_id = 0 and state = 1"
+    run_statement "#12" "$qry" 0
+
+    # Insert lease4
+    qry="insert into lease4 (address, subnet_id, pool_id, state) values (112,1,1,0)"
+    run_statement "#13" "$qry"
+
+    # Assigned state count should be 1
+    qry="select leases from lease4_stat where subnet_id = 1 and state = 0"
+    run_statement "#14" "$qry" 1
+
+    # Assigned state count should be 1
+    qry="select leases from lease4_pool_stat where subnet_id = 1 and pool_id = 1 and state = 0"
+    run_statement "#15" "$qry" 1
+
+    # Insert lease4
+    qry="insert into lease4 (address, subnet_id, pool_id, state) values (113,1,2,0)"
+    run_statement "#16" "$qry"
+
+    # Assigned state count should be 2
+    qry="select leases from lease4_stat where subnet_id = 1 and state = 0"
+    run_statement "#17" "$qry" 2
+
+    # Assigned state count should be 1
+    qry="select leases from lease4_pool_stat where subnet_id = 1 and pool_id = 1 and state = 0"
+    run_statement "#18" "$qry" 1
+
+    # Assigned state count should be 1
+    qry="select leases from lease4_pool_stat where subnet_id = 1 and pool_id = 2 and state = 0"
+    run_statement "#19" "$qry" 1
+
+    # Let's wipe the whole database
+    pgsql_wipe
+
+    test_finish 0
+}
+
+# Verifies that lease6_stat triggers operate correctly
+# for using a given address and lease_type.  It will
+# insert a lease, update it, and delete checking the
+# lease stat counts along the way.  It assumes the
+# database has been created but is empty.
+# param addr - address to use to add to subnet 1
+# param ltype - type of lease to create
+pgsql_lease6_stat_per_type() {
+    addr=$1;shift
+    addr1=$1;shift
+    addr2=$1;shift
+    ltype=$1
+
+    # insert a lease6 for addr and ltype, state assigned
+    qry="insert into lease6 (address, lease_type, subnet_id, state) values (cast('$addr' as inet),$ltype,1,0)"
+    run_statement "#2" "$qry"
+
+    # assigned stat should be 1
+    qry="select leases from lease6_stat where subnet_id = 1 and lease_type = $ltype and state = 0"
+    run_statement "#3" "$qry" 1
+
+    # assigned stat should be 1
+    qry="select leases from lease6_pool_stat where subnet_id = 1 and lease_type = $ltype and pool_id = 0 and state = 0"
+    run_statement "#4" "$qry" 1
+
+    # update the lease, changing state to declined
+    qry="update lease6 set state = 1 where address = cast('$addr' as inet)"
+    run_statement "#5" "$qry"
+
+    # leases stat for assigned state should be 0
+    qry="select leases from lease6_stat where subnet_id = 1 and lease_type = $ltype and state = 0"
+    run_statement "#6" "$qry" 0
+
+    # leases stat for assigned state should be 0
+    qry="select leases from lease6_pool_stat where subnet_id = 1 and lease_type = $ltype and pool_id = 0 and state = 0"
+    run_statement "#7" "$qry" 0
+
+    # leases count for declined state should be 1
+    qry="select leases from lease6_stat where subnet_id = 1 and lease_type = $ltype and state = 1"
+    run_statement "#8" "$qry" 1
+
+    # leases count for declined state should be 1
+    qry="select leases from lease6_pool_stat where subnet_id = 1 and lease_type = $ltype and pool_id = 0 and state = 1"
+    run_statement "#9" "$qry" 1
+
+    # delete the lease
+    qry="delete from lease6 where address = '$addr'"
+    run_statement "#10" "$qry"
+
+    # leases count for declined state should be 0
+    qry="select leases from lease6_stat where subnet_id = 1 and lease_type = $ltype and state = 0"
+    run_statement "#11" "$qry" 0
+
+    # leases count for declined state should be 0
+    qry="select leases from lease6_pool_stat where subnet_id = 1 and lease_type = $ltype and pool_id = 0 and state = 0"
+    run_statement "#12" "$qry" 0
+
+    # insert a lease6 for addr and ltype, state assigned
+    qry="insert into lease6 (address, lease_type, subnet_id, pool_id, state) values (cast('$addr1' as inet),$ltype,1,1,0)"
+    run_statement "#13" "$qry"
+
+    # assigned stat should be 1
+    qry="select leases from lease6_stat where subnet_id = 1 and lease_type = $ltype and state = 0"
+    run_statement "#14" "$qry" 1
+
+    # assigned stat should be 1
+    qry="select leases from lease6_pool_stat where subnet_id = 1 and lease_type = $ltype and pool_id = 1 and state = 0"
+    run_statement "#15" "$qry" 1
+
+    # insert a lease6 for addr and ltype, state assigned
+    qry="insert into lease6 (address, lease_type, subnet_id, pool_id, state) values (cast('$addr2' as inet),$ltype,1,2,0)"
+    run_statement "#16" "$qry"
+
+    # assigned stat should be 2
+    qry="select leases from lease6_stat where subnet_id = 1 and lease_type = $ltype and state = 0"
+    run_statement "#17" "$qry" 2
+
+    # assigned stat should be 1
+    qry="select leases from lease6_pool_stat where subnet_id = 1 and lease_type = $ltype and pool_id = 1 and state = 0"
+    run_statement "#18" "$qry" 1
+
+    # assigned stat should be 1
+    qry="select leases from lease6_pool_stat where subnet_id = 1 and lease_type = $ltype and pool_id = 2 and state = 0"
+    run_statement "#19" "$qry" 1
+}
+
+# Verifies that lease6_stat triggers operate correctly
+# for registered (state 4) leases.
+# insert a lease, update it, and delete checking the
+# lease stat counts along the way.  It assumes the
+# database has been created but is empty.
+# param addr, addr1, addr2 - addresses to use to add to subnet 1
+pgsql_lease6_stat_registered() {
+    addr=$1;shift
+    addr1=$1;shift
+    addr2=$1
+
+    # insert a registered lease6 for addr
+    qry="insert into lease6 (address, lease_type, subnet_id, state, user_context) values (cast('$addr' as inet),0,1,4,'{\"foo\": true}')"
+    run_statement "#2" "$qry"
+
+    # registered stat should be 1
+    qry="select leases from lease6_stat where subnet_id = 1 and lease_type = 0 and state = 4"
+    run_statement "#3" "$qry" 1
+
+    # update the lease, changing user context, keeping state.
+    qry="update lease6 set user_context = '{\"bar\": 1}' where address = cast('$addr' as inet)"
+    run_statement "#4" "$qry"
+
+    # leases count for registered state should be 1
+    qry="select leases from lease6_stat where subnet_id = 1 and lease_type = 0 and state = 4"
+    run_statement "#5" "$qry" 1
+
+    # delete the lease
+    qry="delete from lease6 where address = cast('$addr' as inet)"
+    run_statement "#6" "$qry"
+
+    # leases count for registered state should be 0
+    qry="select leases from lease6_stat where subnet_id = 1 and lease_type = 0 and state = 4"
+    run_statement "#7" "$qry" 0
+
+    # insert a registered lease6 for addr1
+    qry="insert into lease6 (address, lease_type, subnet_id, state) values (cast('$addr1' as inet),0,1,4)"
+    run_statement "#8" "$qry"
+
+    # registered stat should be 1
+    qry="select leases from lease6_stat where subnet_id = 1 and lease_type = 0 and state = 4"
+    run_statement "#9" "$qry" 1
+
+    # update the lease, changing state
+    qry="update lease6 set state = 3 where address = cast('$addr1' as inet)"
+    run_statement "#10" "$qry"
+
+    # registered stat should be 0
+    qry="select leases from lease6_stat where subnet_id = 1 and lease_type = 0 and state = 4"
+    run_statement "#11" "$qry" 0
+
+    # insert a released lease6 for addr2
+    qry="insert into lease6 (address, lease_type, subnet_id, state) values (cast('$addr2' as inet),0,1,3)"
+    run_statement "#12" "$qry"
+
+    # registered stat should be 0
+    qry="select leases from lease6_stat where subnet_id = 1 and lease_type = 0 and state = 4"
+    run_statement "#13" "$qry" 0
+
+    # update the lease, changing state
+    qry="update lease6 set state = 4 where address = cast('$addr2' as inet)"
+    run_statement "#14" "$qry"
+
+    # registered stat should be 1
+    qry="select leases from lease6_stat where subnet_id = 1 and lease_type = 0 and state = 4"
+    run_statement "#15" "$qry" 1
+}
+
+# Verifies that lease6_stat triggers operation correctly
+# for both NA and PD lease types, pgsql_lease6_stat_per_type()
+# and for pgsql_lease6_stat_registered()
+pgsql_lease6_stat_test() {
+
+    test_start "pgsql.lease6_stat_test"
+
+    # Let's wipe the whole database
+    pgsql_wipe
+
+    # Ok, now let's initialize the database
+    run_command \
+        "${kea_admin}" db-init pgsql -u "${db_user}" -p "${db_password}" -n "${db_name}" -d "${db_scripts_dir}"
+    assert_eq 0 "${EXIT_CODE}" "kea-admin db-init pgsql failed, expected %d, returned non-zero status code %d"
+
+    # verify lease6 stat table is present
+    qry="select count(subnet_id) from lease6_stat"
+    run_statement "#1" "$qry"
+
+    # Test for address 111, NA lease type
+    pgsql_lease6_stat_per_type "::11" "::12" "::13" "0"
+
+    # Test for address 222, PD lease type
+    pgsql_lease6_stat_per_type "::22" "::23" "::24" "2"
+
+    # Test for registered addresses ::33, ::34 and ::35
+    pgsql_lease6_stat_registered "::33" "::34" "::35"
+
+    # Let's wipe the whole database
+    pgsql_wipe
+
+    test_finish 0
+}
+
+# Verifies that you can upgrade from earlier version and
+# lease<4/6>_stat tables will be populated based on existing
+# leases and that the stat triggers work properly.
+pgsql_lease_stat_upgrade_test() {
+    test_start "pgsql.lease_stat_upgrade_test"
+
+    # Let's wipe the whole database
+    pgsql_wipe
+
+    # We need to create an older database with lease data so we can
+    # verify the upgrade mechanisms which prepopulate the lease stat
+    # tables.
+    #
+    # Initialize database to schema 1.0.
+    pgsql_execute_script "@abs_top_srcdir@/src/bin/admin/tests/dhcpdb_create_1.0.pgsql"
+    assert_eq 0 "${EXIT_CODE}" "cannot initialize 1.0 database, expected exit code: %d, actual: %d"
+
+    # Now upgrade to schema 2.0, this has lease_state in it
+    pgsql_upgrade_schema_to_version 2.0
+
+    # Now we need insert some leases to "migrate" for both v4 and v6
+    qry=\
+"insert into lease4 (address, subnet_id, state) values (111,10,0);\
+ insert into lease4 (address, subnet_id, state) values (222,10,0);\
+ insert into lease4 (address, subnet_id, state) values (333,10,1);\
+ insert into lease4 (address, subnet_id, state) values (444,10,2);\
+ insert into lease4 (address, subnet_id, state) values (555,77,0)"
+    run_statement "insert v4 leases" "$qry"
+
+    qry=\
+"insert into lease6 (address, lease_type, subnet_id, state) values ('::11',0,40,0);\
+ insert into lease6 (address, lease_type, subnet_id, state) values ('::22',0,40,1);\
+ insert into lease6 (address, lease_type, subnet_id, state) values ('::33',2,40,0);\
+ insert into lease6 (address, lease_type, subnet_id, state) values ('::44',2,50,0);\
+ insert into lease6 (address, lease_type, subnet_id, state) values ('::55',2,50,0);\
+ insert into lease6 (address, lease_type, subnet_id, state) values ('::66',2,40,2)"
+    run_statement "insert v6 leases" "$qry"
+
+    # Let's upgrade it to the latest version.
+    run_command \
+        "${kea_admin}" db-upgrade pgsql -u "${db_user}" -p "${db_password}" -n "${db_name}" -d "${db_scripts_dir}"
+
+    #
+    # First we'll verify lease4_stats are correct after migration.
+    #
+
+    # Assigned leases for subnet 10 should be 2
+    qry="select leases from lease4_stat where subnet_id = 10 and state = 0"
+    run_statement "#4.1" "$qry" 2
+
+    # Assigned leases for subnet 10 should be 2
+    qry="select leases from lease4_pool_stat where subnet_id = 10 and pool_id = 0 and state = 0"
+    run_statement "#4.2" "$qry" 2
+
+    # Assigned leases for subnet 77 should be 1
+    qry="select leases from lease4_stat where subnet_id = 77 and state = 0"
+    run_statement "#4.3" "$qry" 1
+
+    # Assigned leases for subnet 77 should be 1
+    qry="select leases from lease4_pool_stat where subnet_id = 77 and pool_id = 0 and state = 0"
+    run_statement "#4.4" "$qry" 1
+
+    # Should be no records for EXPIRED
+    qry="select count(subnet_id) from lease4_stat where state = 2"
+    run_statement "#4.5" "$qry" 0
+
+    # Should be no records for EXPIRED
+    qry="select count(subnet_id) from lease4_pool_stat where state = 2"
+    run_statement "#4.6" "$qry" 0
+
+    #
+    # Now we'll verify v4 trigger operation for insert, update, and delete
+    #
+
+    # Insert a new lease subnet 77
+    qry="insert into lease4 (address, subnet_id, pool_id, state) values (777,77,1,0)"
+    run_statement "#4.7" "$qry"
+
+    # Assigned count for subnet 77 should be 2
+    qry="select leases from lease4_stat where subnet_id = 77 and state = 0"
+    run_statement "#4.8" "$qry" 2
+
+    # Assigned count for subnet 77 should be 1
+    qry="select leases from lease4_pool_stat where subnet_id = 77 and pool_id = 0 and state = 0"
+    run_statement "#4.9" "$qry" 1
+
+    # Assigned count for subnet 77 should be 1
+    qry="select leases from lease4_pool_stat where subnet_id = 77 and pool_id = 1 and state = 0"
+    run_statement "#4.10" "$qry" 1
+
+    # Update the state of the new lease to declined
+    qry="update lease4 set state = 1 where address = 777"
+    run_statement "#4.11" "$qry"
+
+    # Assigned count for subnet 77 should be 1 again
+    qry="select leases from lease4_stat where subnet_id = 77 and state = 0"
+    run_statement "#4.12" "$qry" 1
+
+    # Assigned count for subnet 77 should be 1 again
+    qry="select leases from lease4_pool_stat where subnet_id = 77 and pool_id = 0 and state = 0"
+    run_statement "#4.13" "$qry" 1
+
+    # Assigned count for subnet 77 should be 0 again
+    qry="select leases from lease4_pool_stat where subnet_id = 77 and pool_id = 1 and state = 0"
+    run_statement "#4.14" "$qry" 0
+
+    # Declined count for subnet 77 should be 1
+    qry="select leases from lease4_stat where subnet_id = 77 and state = 1"
+    run_statement "#4.15" "$qry" 1
+
+    # Declined count for subnet 77 should be 1
+    qry="select leases from lease4_pool_stat where subnet_id = 77 and pool_id = 1 and state = 1"
+    run_statement "#4.16" "$qry" 1
+
+    # Delete the lease.
+    qry="delete from lease4 where address = 777"
+    run_statement "#4.17" "$qry"
+
+    # Declined count for subnet 77 should be 0
+    qry="select leases from lease4_stat where subnet_id = 77 and state = 1"
+    run_statement "#4.18" "$qry" 0
+
+    # Declined count for subnet 77 should be 0
+    qry="select leases from lease4_pool_stat where subnet_id = 77 and pool_id = 1 and state = 1"
+    run_statement "#4.19" "$qry" 0
+
+    #
+    # Next we'll verify lease6_stats are correct after migration.
+    #
+
+    # Assigned leases for subnet 40 should be 1
+    qry="select leases from lease6_stat where subnet_id = 40 and lease_type = 0 and state = 0"
+    run_statement "#6.1" "$qry" 1
+
+    # Assigned leases for subnet 40 should be 1
+    qry="select leases from lease6_pool_stat where subnet_id = 40 and lease_type = 0 and pool_id = 0 and state = 0"
+    run_statement "#6.2" "$qry" 1
+
+    # Assigned (PD) leases for subnet 40 should be 1
+    qry="select leases from lease6_stat where subnet_id = 40 and lease_type = 2 and state = 0"
+    run_statement "#6.3" "$qry" 1
+
+    # Assigned (PD) leases for subnet 40 should be 1
+    qry="select leases from lease6_pool_stat where subnet_id = 40 and lease_type = 2 and pool_id = 0 and state = 0"
+    run_statement "#6.4" "$qry" 1
+
+    # Declined leases for subnet 40 should be 1
+    qry="select leases from lease6_stat where subnet_id = 40 and lease_type = 0 and state = 1"
+    run_statement "#6.5" "$qry" 1
+
+    # Declined leases for subnet 40 should be 1
+    qry="select leases from lease6_pool_stat where subnet_id = 40 and lease_type = 0 and pool_id = 0 and state = 1"
+    run_statement "#6.6" "$qry" 1
+
+    # Assigned (PD) leases for subnet 50 should be 2
+    qry="select leases from lease6_stat where subnet_id = 50 and lease_type = 2 and state = 0"
+    run_statement "#6.7" "$qry" 2
+
+    # Assigned (PD) leases for subnet 50 should be 2
+    qry="select leases from lease6_pool_stat where subnet_id = 50 and lease_type = 2 and pool_id = 0 and state = 0"
+    run_statement "#6.8" "$qry" 2
+
+    # Should be no records for EXPIRED
+    qry="select count(subnet_id) from lease6_stat where state = 2"
+    run_statement "#6.9" "$qry" 0
+
+    # Should be no records for EXPIRED
+    qry="select count(subnet_id) from lease6_pool_stat where state = 2"
+    run_statement "#6.10" "$qry" 0
+
+    #
+    # Finally we'll verify v6 trigger operation for insert, update, and delete
+    #
+
+    # Insert a new lease subnet 50
+    qry="insert into lease6 (address, subnet_id, pool_id, lease_type, state) values ('::77',50,1,2,0)"
+    run_statement "#6.11" "$qry"
+
+    # Assigned count for subnet 50 should be 3
+    qry="select leases from lease6_stat where subnet_id = 50 and lease_type = 2 and state = 0"
+    run_statement "#6.12" "$qry" 3
+
+    # Assigned count for subnet 50 should be 2
+    qry="select leases from lease6_pool_stat where subnet_id = 50 and lease_type = 2 and pool_id = 0 and state = 0"
+    run_statement "#6.13" "$qry" 2
+
+    # Assigned count for subnet 50 should be 1
+    qry="select leases from lease6_pool_stat where subnet_id = 50 and lease_type = 2 and pool_id = 1 and state = 0"
+    run_statement "#6.14" "$qry" 1
+
+    # Update the state of the new lease to expired
+    qry="update lease6 set state = 2 where address = '::77'"
+    run_statement "#6.15" "$qry"
+
+    # Assigned count for subnet 50 should be 2 again
+    qry="select leases from lease6_stat where subnet_id = 50 and lease_type = 2 and state = 0"
+    run_statement "#6.16" "$qry" 2
+
+    # Assigned count for subnet 50 should be 0 again
+    qry="select leases from lease6_pool_stat where subnet_id = 50 and lease_type = 2 and pool_id = 1 and state = 0"
+    run_statement "#6.17" "$qry" 0
+
+    # Delete another PD lease.
+    qry="delete from lease6 where address = '::55'"
+    run_statement "#6.18" "$qry"
+
+    # Assigned leases for subnet 50 should be 1
+    qry="select leases from lease6_stat where subnet_id = 50 and lease_type = 2 and state = 0"
+    run_statement "#6.19" "$qry" 1
+
+    # Assigned leases for subnet 50 should be 1
+    qry="select leases from lease6_pool_stat where subnet_id = 50 and lease_type = 2 and pool_id = 0 and state = 0"
+    run_statement "#6.20" "$qry" 1
+
+    # Let's wipe the whole database
+    pgsql_wipe
+
+    test_finish 0
+}
+
+pgsql_lease_stat_recount_test() {
+    test_start "pgsql.lease_stat_recount_test"
+
+    # Let's wipe the whole database
+    pgsql_wipe
+
+    # Ok, now let's initialize the database
+    run_command \
+        "${kea_admin}" db-init pgsql -u "${db_user}" -p "${db_password}" -n "${db_name}" -d "${db_scripts_dir}"
+    assert_eq 0 "${EXIT_CODE}" "kea-admin db-init pgsql failed, expected %d, returned non-zero status code %d"
+
+    # Now we need insert some leases to "recount"
+    qry=\
+"insert into lease4 (address, subnet_id, state) values (111,10,0);\
+ insert into lease4 (address, subnet_id, pool_id, state) values (222,10,1,0);\
+ insert into lease4 (address, subnet_id, state) values (333,10,1);\
+ insert into lease4 (address, subnet_id, state) values (444,10,2);\
+ insert into lease4 (address, subnet_id, pool_id, state) values (555,77,2,0)"
+    run_statement "insert v4 leases" "$qry"
+
+    qry=\
+"insert into lease6 (address, lease_type, subnet_id, state) values (cast('::11' as inet),0,40,0);\
+ insert into lease6 (address, lease_type, subnet_id, pool_id, state) values (cast('::22' as inet),0,40,1,1);\
+ insert into lease6 (address, lease_type, subnet_id, state) values (cast('::33' as inet),2,40,0);\
+ insert into lease6 (address, lease_type, subnet_id, state) values (cast('::44' as inet),2,50,0);\
+ insert into lease6 (address, lease_type, subnet_id, pool_id, state) values (cast('::55' as inet),2,50,2,0);\
+ insert into lease6 (address, lease_type, subnet_id, state) values (cast('::66' as inet),2,40,2);\
+ insert into lease6 (address, lease_type, subnet_id, state) values ('::77',0,40,4);\
+ insert into lease6 (address, lease_type, subnet_id, state) values ('::88',0,40,4)"
+    run_statement "insert v6 leases" "$qry"
+
+    # Now we change some counters.
+    qry=\
+"insert into lease4_stat (subnet_id, state, leases) values (20,0,1);\
+ update lease4_stat set leases = 5 where subnet_id = 10 and state = 0;\
+ delete from lease4_stat where subnet_id = 10 and state = 2"
+    run_statement "change v4 stats" "$qry"
+
+    qry=\
+"insert into lease4_pool_stat (subnet_id, pool_id, state, leases) values (20,3,0,1);\
+ update lease4_pool_stat set leases = 5 where subnet_id = 10 and pool_id = 0 and state = 0;\
+ delete from lease4_pool_stat where subnet_id = 10 and pool_id = 0 and state = 2"
+    run_statement "change v4 pool stats" "$qry"
+
+    qry=\
+"insert into lease6_stat (subnet_id, lease_type, state, leases) values (20,1,0,1);\
+ update lease6_stat set leases = 5 where subnet_id = 40 and lease_type = 0 and state = 0;\
+ delete from lease6_stat where subnet_id = 40 and lease_type = 2 and state = 2;\
+ delete from lease6_stat where subnet_id = 40 and lease_type = 0 and state = 4"
+    run_statement "change v6 stats" "$qry"
+
+    qry=\
+"insert into lease6_pool_stat (subnet_id, pool_id, lease_type, state, leases) values (20,3,2,0,1);\
+ update lease6_pool_stat set leases = 5 where subnet_id = 40 and lease_type = 0 and pool_id = 0 and state = 0;\
+ delete from lease6_pool_stat where subnet_id = 40 and lease_type = 2 and pool_id = 0 and state = 2"
+    run_statement "change v6 pool stats" "$qry"
+
+    # Recount all statistics from scratch.
+    run_command \
+        "${kea_admin}" stats-recount pgsql -u "${db_user}" -p "${db_password}" -n "${db_name}"
+    assert_eq 0 "${EXIT_CODE}" "kea-admin stats-recount pgsql failed, expected %d, returned non-zero status code %d"
+
+    #
+    # First we'll verify lease4_stats are correct after recount.
+    #
+
+    # Assigned leases for subnet 10 should be 2
+    qry="select leases from lease4_stat where subnet_id = 10 and state = 0"
+    run_statement "#4.1" "$qry" 2
+
+    # Assigned leases for subnet 10 pool 0 should be 1
+    qry="select leases from lease4_pool_stat where subnet_id = 10 and pool_id = 0 and state = 0"
+    run_statement "#4.2" "$qry" 1
+
+    # Assigned leases for subnet 10 pool 1 should be 1
+    qry="select leases from lease4_pool_stat where subnet_id = 10 and pool_id = 1 and state = 0"
+    run_statement "#4.3" "$qry" 1
+
+    # Declined leases for subnet 10 should be 1
+    qry="select leases from lease4_stat where subnet_id = 10 and state = 1"
+    run_statement "#4.4" "$qry" 1
+
+    # Declined leases for subnet 10 pool 0 should be 1
+    qry="select leases from lease4_pool_stat where subnet_id = 10 and pool_id = 0 and state = 0"
+    run_statement "#4.5" "$qry" 1
+
+    # Assigned leases for subnet 77 should be 1
+    qry="select leases from lease4_stat where subnet_id = 77 and state = 0"
+    run_statement "#4.6" "$qry" 1
+
+    # Assigned leases for subnet 77 pool 2should be 1
+    qry="select leases from lease4_pool_stat where subnet_id = 77 and pool_id = 2 and state = 0"
+    run_statement "#4.7" "$qry" 1
+
+    # Should be no records for EXPIRED
+    qry="select count(subnet_id) from lease4_stat where state = 2"
+    run_statement "#4.8" "$qry" 0
+
+    # Should be no records for EXPIRED
+    qry="select count(subnet_id) from lease4_pool_stat where state = 2"
+    run_statement "#4.9" "$qry" 0
+
+    # Should be no records for RELEASED
+    qry="select count(subnet_id) from lease4_stat where state = 3"
+    run_statement "#4.10" "$qry" 0
+
+    # Should be no records for RELEASED
+    qry="select count(subnet_id) from lease4_pool_stat where state = 3"
+    run_statement "#4.11" "$qry" 0
+
+    #
+    # Next we'll verify lease6_stats are correct after recount.
+    #
+
+    # Assigned leases for subnet 40 should be 1
+    qry="select leases from lease6_stat where subnet_id = 40 and lease_type = 0 and state = 0"
+    run_statement "#6.1" "$qry" 1
+
+    # Assigned leases for subnet 40 pool 0 should be 1
+    qry="select leases from lease6_pool_stat where subnet_id = 40 and lease_type = 0 and pool_id = 0 and state = 0"
+    run_statement "#6.2" "$qry" 1
+
+    # Assigned (PD) leases for subnet 40 should be 1
+    qry="select leases from lease6_stat where subnet_id = 40 and lease_type = 2 and state = 0"
+    run_statement "#6.3" "$qry" 1
+
+    # Assigned (PD) leases for subnet 40 pool 0 should be 1
+    qry="select leases from lease6_pool_stat where subnet_id = 40 and lease_type = 2 and pool_id = 0 and state = 0"
+    run_statement "#6.4" "$qry" 1
+
+    # Declined leases for subnet 40 should be 1
+    qry="select leases from lease6_stat where subnet_id = 40 and lease_type = 0 and state = 1"
+    run_statement "#6.5" "$qry" 1
+
+    # Declined leases for subnet 40 pool 1 should be 1
+    qry="select leases from lease6_pool_stat where subnet_id = 40 and lease_type = 0 and pool_id = 1 and state = 1"
+    run_statement "#6.6" "$qry" 1
+
+    # Assigned (PD) leases for subnet 50 should be 2
+    qry="select leases from lease6_stat where subnet_id = 50 and lease_type = 2 and state = 0"
+    run_statement "#6.7" "$qry" 2
+
+    # Assigned (PD) leases for subnet 50 pool 0 should be 1
+    qry="select leases from lease6_pool_stat where subnet_id = 50 and lease_type = 2 and pool_id = 0 and state = 0"
+    run_statement "#6.8" "$qry" 1
+
+    # Assigned (PD) leases for subnet 50 pool 2 should be 1
+    qry="select leases from lease6_pool_stat where subnet_id = 50 and lease_type = 2 and pool_id = 2 and state = 0"
+    run_statement "#6.9" "$qry" 1
+
+    # Should be no records for EXPIRED
+    qry="select count(subnet_id) from lease6_stat where state = 2"
+    run_statement "#6.10" "$qry" 0
+
+    # Should be no records for EXPIRED
+    qry="select count(subnet_id) from lease6_pool_stat where state = 2"
+    run_statement "#6.11" "$qry" 0
+
+    # Should be no records for RELEASED
+    qry="select count(subnet_id) from lease6_stat where state = 3"
+    run_statement "#6.12" "$qry" 0
+
+    # Should be no records for RELEASED
+    qry="select count(subnet_id) from lease6_pool_stat where state = 3"
+    run_statement "#6.13" "$qry" 0
+
+    # Registered leases for subnet 40 should be 2
+    qry="select leases from lease6_stat where subnet_id = 40 and lease_type = 0 and state = 4"
+    run_statement "#6.14" "$qry" 2
+
+    # Let's wipe the whole database
+    pgsql_wipe
+
+    test_finish 0
+}
+
+# Verifies that you can upgrade from an earlier version and
+# that unused subnet ID values in hosts and options tables are
+# converted to NULL.
+pgsql_unused_subnet_id_test() {
+    test_start "pgsql.unused_subnet_id_test"
+
+    # Let's wipe the whole database
+    pgsql_wipe
+
+    # We need to create an older database with lease data so we can
+    # verify the upgrade mechanisms which prepopulate the lease stat
+    # tables.
+    #
+    # Initialize database to schema 1.0.
+    pgsql_execute_script "@abs_top_srcdir@/src/bin/admin/tests/dhcpdb_create_1.0.pgsql"
+    assert_eq 0 "${EXIT_CODE}" "cannot initialize 1.0 database, expected exit code: %d, actual: %d"
+
+    # Now upgrade to schema 4.0
+    pgsql_upgrade_schema_to_version 4.0
+
+    # Now we need insert some hosts to "migrate" for both v4 and v6
+    qry=\
+"insert into hosts (dhcp_identifier_type, dhcp_identifier, dhcp4_subnet_id, dhcp6_subnet_id, hostname)\
+   values (0, '0123456', 0, 0, 'both'); \
+ insert into hosts (dhcp_identifier_type, dhcp_identifier, dhcp4_subnet_id, dhcp6_subnet_id, hostname)\
+   values (0, '1123456', 4, 0, 'v4only');
+ insert into hosts (dhcp_identifier_type, dhcp_identifier, dhcp4_subnet_id, dhcp6_subnet_id, hostname)\
+   values (0, '2123456', 0, 6, 'v6only');\
+ insert into hosts (dhcp_identifier_type, dhcp_identifier, dhcp4_subnet_id, dhcp6_subnet_id, hostname) \
+   values (0, '3123456', 4, 6, 'neither')"
+
+    run_statement "insert hosts" "$qry"
+
+    # Now we need insert some options to "migrate" for both v4 and v6
+    qry=\
+"insert into dhcp4_options (code, dhcp4_subnet_id, scope_id) values (1, 4, 0);\
+ insert into dhcp4_options (code, dhcp4_subnet_id, scope_id) values (2, 0, 0);\
+ insert into dhcp6_options (code, dhcp6_subnet_id, scope_id) values (1, 6, 0);\
+ insert into dhcp6_options (code, dhcp6_subnet_id, scope_id) values (2, 0, 0)"
+
+    run_statement "insert options" "$qry"
+
+    # We have a 4.0 schema with hosts and options. Let's upgrade it to 6.2.
+    # For versions higher than 6.2 some new constraints fail to be added
+    # with the not empty tables, for instance the 6.2 -> 7.0 upgrade script
+    # can raise a key constraining violation for fk_dhcp6_options_subnet.
+    pgsql_upgrade_schema_to_version 6.2
+
+    # Version should now be 6.2.
+    version=$("${kea_admin}" db-version pgsql -u "${db_user}" -p "${db_password}" -n "${db_name}" -d "${db_scripts_dir}")
+    assert_str_eq "6.2" "${version}" "Expected kea-admin to return %s, returned value was %s"
+
+    # Two hosts should have null v4 subnet ids
+    qry="select count(host_id) from hosts where dhcp4_subnet_id is null"
+    run_statement "#hosts.1" "$qry" 2
+
+    # Two hosts should have v4 subnet ids = 4
+    qry="select count(host_id) from hosts where dhcp4_subnet_id = 4"
+    run_statement "#hosts.2" "$qry" 2
+
+    # Two hosts should have null v6 subnet ids
+    qry="select count(host_id) from hosts where dhcp6_subnet_id is null"
+    run_statement "#hosts.3" "$qry" 2
+
+    # Two hosts should should have v6 subnet ids = 6
+    qry="select count(host_id) from hosts where dhcp6_subnet_id = 6"
+    run_statement "#hosts.4" "$qry" 2
+
+    # One option should have null v4 subnet id
+    qry="select count(option_id) from dhcp4_options where dhcp4_subnet_id is null"
+    run_statement "#options.1" "$qry" 1
+
+    # One option should have v4 subnet id = 4
+    qry="select count(option_id) from dhcp4_options where dhcp4_subnet_id = 4"
+    run_statement "#options.2" "$qry" 1
+
+    # One option should have null v6 subnet id
+    qry="select count(option_id) from dhcp6_options where dhcp6_subnet_id is null"
+    run_statement "#options.3" "$qry" 1
+
+    # One option should have v4 subnet id = 6
+    qry="select count(option_id) from dhcp6_options where dhcp6_subnet_id = 6"
+    run_statement "#options.4" "$qry" 1
+
+    # Let's wipe the whole database
+    pgsql_wipe
+
+    test_finish 0
+}
+
+# Verifies that you can upgrade from earlier version and that initial EMPTY DUID
+# (0x00) value in lease6 table is updated to proper value (0x000000).
+pgsql_update_empty_duid_test() {
+    test_start "pgsql.update_empty_duid_test"
+
+    # Let's wipe the whole database
+    pgsql_wipe
+
+    # We need to create an older database with lease data so we can
+    # verify the upgrade mechanisms which prepopulate the lease stat
+    # tables.
+    #
+    # Initialize database to schema 1.0.
+    pgsql_execute_script "@abs_top_srcdir@/src/bin/admin/tests/dhcpdb_create_1.0.pgsql"
+    assert_eq 0 "${EXIT_CODE}" "cannot initialize 1.0 database, expected exit code: %d, actual: %d"
+
+    # Now upgrade to schema 15.0
+    pgsql_upgrade_schema_to_version 15.0
+
+    qry=\
+"insert into lease6 values('::10',E'\\\\x323033',30,TO_TIMESTAMP(1642000000),40,50,1,60,70,'t','t','one.example.com',0,decode(encode('80','hex'),'hex'),90,16,''); \
+ insert into lease6 values('::11',E'\\\\x00',30,TO_TIMESTAMP(1643210000),40,50,1,60,70,'t','t','',1,decode(encode('80','hex'),'hex'),90,1,'{  }')"
+
+    run_statement "insert v6 leases" "$qry"
+
+    # Let's upgrade it to the latest version.
+    run_command \
+        "${kea_admin}" db-upgrade pgsql -u "${db_user}" -p "${db_password}" -n "${db_name}" -d "${db_scripts_dir}"
+
+    # leases count for declined state should be 1 with DUID updated (0x000000)
+    qry="select count(*) from lease6 where address = '::11' and duid = E'\\\\x000000' and state = 1"
+    run_statement "#2" "$qry" 1
+
+    # leases count for non declined state should be 1 with DUID unchanged (0x323033)
+    qry="select count(*) from lease6 where address = '::10' and duid = E'\\\\x323033' and state = 0"
+    run_statement "#3" "$qry" 1
+
+    # Let's wipe the whole database
+    pgsql_wipe
+
+    test_finish 0
+}
+
+# Verifies that converting from lease6.address to binary column works
+# while preserving data.
+pgsql_update_v6_addresses_to_binary() {
+    test_start "pgsql.update_v6_address_to_binary"
+
+    # Let's wipe the whole database
+    pgsql_wipe
+
+    # Initialize database to schema 1.0.
+    pgsql_execute_script "@abs_top_srcdir@/src/bin/admin/tests/dhcpdb_create_1.0.pgsql"
+    assert_eq 0 "${EXIT_CODE}" "cannot initialize 1.0 database, expected exit code: %d, actual: %d"
+
+    # Now upgrade to schema 16.0
+    pgsql_upgrade_schema_to_version 16.0
+
+    sql=\
+"insert into lease6 (address, lease_type, subnet_id) values('2601:19e:8100:1e10:b1b:51a8:f616:cf14', 0, 1);
+insert into lease6 (address, lease_type, subnet_id) values('2601:19e:8100:1e10:b1b:51a8:f616:cf15', 0, 1);"
+
+    run_statement "insert v6 leases" "$sql"
+
+    # Insert ipv6_reservations address is binary.
+    sql=\
+"insert into hosts(host_id, dhcp_identifier, dhcp_identifier_type) values (18219, '18219', 1); \
+insert into ipv6_reservations (address, prefix_len, type, dhcp6_iaid, host_id) \
+        values ('2601:19e:8100:1e10:b1b:51a8:f616:cf16', 128, 1, 123, 18219);"
+
+    run_statement "insert an ipv6 reservation" "$sql"
+
+    # Let's upgrade it to the latest version.
+    run_command \
+        "${kea_admin}" db-upgrade pgsql -u "${db_user}" -p "${db_password}" -n "${db_name}" -d "${db_scripts_dir}"
+
+    # leases count for declined state should be 1 with DUID updated (0x000000)
+    qry="select count(*) from lease6 where address = cast('2601:19e:8100:1e10:b1b:51a8:f616:cf14' as inet);"
+    run_statement "#2" "$qry" 1
+
+    # leases count for non declined state should be 1 with DUID unchanged (0x323033)
+    qry="select count(*) from lease6 where address = cast('2601:19e:8100:1e10:b1b:51a8:f616:cf15' as inet);"
+    run_statement "#3" "$qry" 1
+
+    # verify the reservation is intact
+    qry="select host(address) from ipv6_reservations where host_id = 18219;"
+    run_statement "ipv6_reservations_insert" "$qry" "2601:19e:8100:1e10:b1b:51a8:f616:cf16"
+
+    # Let's wipe the whole database
+    pgsql_wipe
+
+    test_finish 0
+}
+
+# Verifies that you can upgrade from an earlier version and
+# that CB global parameter entries for 'ddns-use-conflict-resolution'
+# will get translated to 'ddns-conflict-resolution-mode'.
+pgsql_ddns_conflict_resolution_mode_update_test() {
+    test_start "pgsql.ddns_conflict_resolution_mode_update_test"
+
+    # Let's wipe the whole database
+    pgsql_wipe
+
+    # We need to create an older database with lease data so we can
+    # verify the upgrade mechanisms which prepopulate the lease stat
+    # tables.
+    #
+    # Initialize database to schema 1.0.
+    pgsql_execute_script "@abs_top_srcdir@/src/bin/admin/tests/dhcpdb_create_1.0.pgsql"
+    assert_eq 0 "${EXIT_CODE}" "cannot initialize 1.0 database, expected exit code: %d, actual: %d"
+
+    # Now upgrade to schema 18.0
+    pgsql_upgrade_schema_to_version 18.0
+
+    # Now we need insert some subnets and shared networks.
+    sql=\
+"select set_config('kea.disable_audit', 'true', false);\
+ insert into dhcp4_global_parameter (name,value,modification_ts,parameter_type)\
+    values ('ddns-use-conflict-resolution','0',current_timestamp,2);
+ insert into dhcp4_global_parameter (name,value,modification_ts,parameter_type)\
+    values ('ddns-use-conflict-resolution','1',current_timestamp,2);
+ insert into dhcp6_global_parameter (name,value,modification_ts,parameter_type)\
+    values ('ddns-use-conflict-resolution','0',current_timestamp,2);
+ insert into dhcp6_global_parameter (name,value,modification_ts,parameter_type)\
+    values ('ddns-use-conflict-resolution','1',current_timestamp,2);"
+
+    run_statement "insert ddns_conflict_resolution_mode" "$sql"
+
+    # Verify the inserted record counts.
+    qry="select count(*) from dhcp4_global_parameter where name='ddns-use-conflict-resolution';"
+    run_statement "#get 4_global parameter count before update" "$qry" 2
+
+    qry="select count(*) from dhcp6_global_parameter where name='ddns-use-conflict-resolution';"
+    run_statement "#get 6_global parameter count before update" "$qry" 2
+
+    # Upgrade to schema 20.0
+    pgsql_upgrade_schema_to_version 20.0
+
+    # Verify we converted parameters correctly.
+    qry="select count(*) from dhcp4_global_parameter where name='ddns-conflict-resolution-mode' and\
+         value='check-with-dhcid'"
+    run_statement "#get 4_check-with-dhcid after update" "$qry" 1
+
+    qry="select count(*) from dhcp4_global_parameter where name='ddns-conflict-resolution-mode' and\
+         value='no-check-with-dhcid'"
+    run_statement "#get 4_no-check-with-dhcid after update" "$qry" 1
+
+    qry="select count(*) from dhcp6_global_parameter where name='ddns-conflict-resolution-mode' and\
+         value='check-with-dhcid'"
+    run_statement "#get 6_check-with-dhcid after update" "$qry" 1
+
+    qry="select count(*) from dhcp6_global_parameter where name='ddns-conflict-resolution-mode' and\
+         value='no-check-with-dhcid'"
+    run_statement "#get 6_no-check-with-dhcid after update" "$qry" 1
+
+    # Let's wipe the whole database
+    pgsql_wipe
+
+    test_finish 0
+}
+
+# Verifies that deprecated dhcp-ddns global map parameters are removed.
+pgsql_dhcp_ddns_global_parameters_test() {
+    test_start "pgsql.dhcp_ddns_global_parameters_test"
+
+    # Let's wipe the whole database
+    pgsql_wipe
+
+    # We need to create an older database with lease data so we can
+    # verify the upgrade mechanisms which prepopulate the lease stat
+    # tables.
+    #
+    # Initialize database to schema 1.0.
+    pgsql_execute_script "@abs_top_srcdir@/src/bin/admin/tests/dhcpdb_create_1.0.pgsql"
+    assert_eq 0 "${EXIT_CODE}" "cannot initialize 1.0 database, expected exit code: %d, actual: %d"
+
+    # Now upgrade to schema 21.0
+    pgsql_upgrade_schema_to_version 21.0
+
+    # Now insert global parameter instances of dhcp-ddns.
+    sql=\
+"select set_config('kea.disable_audit', 'true', false);\
+ insert into dhcp4_global_parameter (name,value,modification_ts,parameter_type)\
+    values ('dhcp-ddns.generated-prefix','my-host',current_timestamp,4);
+ insert into dhcp4_global_parameter (name,value,modification_ts,parameter_type)\
+    values ('dhcp-ddns.qualifying-suffix','',current_timestamp,4);
+ insert into dhcp4_global_parameter (name,value,modification_ts,parameter_type)\
+    values ('dhcp-ddns.override-no-update','1',current_timestamp,2);
+ insert into dhcp4_global_parameter (name,value,modification_ts,parameter_type)\
+    values ('dhcp-ddns.override-client-update','1',current_timestamp,2);
+ insert into dhcp4_global_parameter (name,value,modification_ts,parameter_type)\
+    values ('dhcp-ddns.replace-client-name','never',current_timestamp,4);
+ insert into dhcp4_global_parameter (name,value,modification_ts,parameter_type)\
+    values ('dhcp-ddns.hostname-char-replacement','',current_timestamp,4);
+ insert into dhcp4_global_parameter (name,value,modification_ts,parameter_type)\
+    values ('dhcp-ddns.hostname-char-set','[^A-Za-z0-9.-]',current_timestamp,4);
+ insert into dhcp6_global_parameter (name,value,modification_ts,parameter_type)\
+    values ('dhcp-ddns.generated-prefix','my-host',current_timestamp,4);
+ insert into dhcp6_global_parameter (name,value,modification_ts,parameter_type)\
+    values ('dhcp-ddns.qualifying-suffix','',current_timestamp,4);
+ insert into dhcp6_global_parameter (name,value,modification_ts,parameter_type)\
+    values ('dhcp-ddns.override-no-update','1',current_timestamp,2);
+ insert into dhcp6_global_parameter (name,value,modification_ts,parameter_type)\
+    values ('dhcp-ddns.override-client-update','1',current_timestamp,2);
+ insert into dhcp6_global_parameter (name,value,modification_ts,parameter_type)\
+    values ('dhcp-ddns.replace-client-name','never',current_timestamp,4);
+ insert into dhcp6_global_parameter (name,value,modification_ts,parameter_type)\
+    values ('dhcp-ddns.hostname-char-replacement','',current_timestamp,4);
+ insert into dhcp6_global_parameter (name,value,modification_ts,parameter_type)\
+    values ('dhcp-ddns.hostname-char-set','[^A-Za-z0-9.-]',current_timestamp,4);"
+
+    run_statement "insert dhcp-ddns map parameters" "$sql"
+
+    # Verify the inserted record counts.
+    qry="select count(*) from dhcp4_global_parameter where name like '%dhcp-ddns%';"
+    run_statement "#get 4_global parameter count before update" "$qry" 7
+
+    qry="select count(*) from dhcp6_global_parameter where name like '%dhcp-ddns%';"
+    run_statement "#get 6_global parameter count before update" "$qry" 7
+
+    # Upgrade to schema 22.0
+    pgsql_upgrade_schema_to_version 22.0
+
+    # Verify the record have been removed.
+    qry="select count(*) from dhcp4_global_parameter where name like '%dhcp-ddns%';"
+    run_statement "#get 4_global parameter count after update" "$qry" 0
+
+    qry="select count(*) from dhcp6_global_parameter where name like '%dhcp-ddns%';"
+    run_statement "#get 6_global parameter count after update" "$qry" 0
+
+    # Let's wipe the whole database
+    pgsql_wipe
+
+    test_finish 0
+}
+
+# Verifies that deprecated reservation_mode "disabled" is migrated.
+pgsql_reservation_mode_disabled_parameters_test() {
+    test_start "pgsql.reservation_mode_disabled_parameters_test"
+
+    # Let's wipe the whole database
+    pgsql_wipe
+
+    # We need to create an older database with lease data so we can
+    # verify the upgrade mechanisms which prepopulate the lease stat
+    # tables.
+    #
+    # Initialize database to schema 1.0.
+    pgsql_execute_script "@abs_top_srcdir@/src/bin/admin/tests/dhcpdb_create_1.0.pgsql"
+    assert_eq 0 "${EXIT_CODE}" "cannot initialize 1.0 database, expected exit code: %d, actual: %d"
+
+    # Now upgrade to schema 21.0
+    pgsql_upgrade_schema_to_version 21.0
+
+    # Now insert global parameter instances of reservation_mode.
+    sql=\
+"select set_config('kea.disable_audit', 'true', false);\
+ insert into dhcp4_global_parameter (name,value,modification_ts,parameter_type)\
+    values ('reservation-mode','disabled',current_timestamp,4);
+ insert into dhcp6_global_parameter (name,value,modification_ts,parameter_type)\
+    values ('reservation-mode','disabled',current_timestamp,4);"
+
+    run_statement "insert reservation_mode parameters" "$sql"
+
+    # Verify the inserted record counts.
+    qry="select count(*) from dhcp4_global_parameter where name like '%reservation-mode%';"
+    run_statement "#get 4_global parameter count before update" "$qry" 1
+
+    qry="select count(*) from dhcp6_global_parameter where name like '%reservation-mode%';"
+    run_statement "#get 6_global parameter count before update" "$qry" 1
+
+    qry="select count(*) from dhcp4_global_parameter where name='reservations-in-subnet' AND value='0' AND parameter_type=2;"
+    run_statement "#get exact 4_global parameter count before update" "$qry" 0
+
+    qry="select count(*) from dhcp6_global_parameter where name='reservations-in-subnet' AND value='0' AND parameter_type=2;"
+    run_statement "#get exact 6_global parameter count before update" "$qry" 0
+
+    # Upgrade to schema 22.0
+    pgsql_upgrade_schema_to_version 22.0
+
+    # Verify the record have been removed.
+    qry="select count(*) from dhcp4_global_parameter where name like '%reservation-mode%';"
+    run_statement "#get 4_global parameter count after update" "$qry" 0
+
+    qry="select count(*) from dhcp6_global_parameter where name like '%reservation-mode%';"
+    run_statement "#get 6_global parameter count after update" "$qry" 0
+
+    qry="select count(*) from dhcp4_global_parameter where name='reservations-in-subnet' AND value='0' AND parameter_type=2;"
+    run_statement "#get exact 4_global parameter count after update" "$qry" 1
+
+    qry="select count(*) from dhcp6_global_parameter where name='reservations-in-subnet' AND value='0' AND parameter_type=2;"
+    run_statement "#get exact 6_global parameter count after update" "$qry" 1
+
+    # Let's wipe the whole database
+    pgsql_wipe
+
+    test_finish 0
+}
+
+# Verifies that deprecated reservation_mode "off" is migrated.
+pgsql_reservation_mode_off_parameters_test() {
+    test_start "pgsql.reservation_mode_off_parameters_test"
+
+    # Let's wipe the whole database
+    pgsql_wipe
+
+    # We need to create an older database with lease data so we can
+    # verify the upgrade mechanisms which prepopulate the lease stat
+    # tables.
+    #
+    # Initialize database to schema 1.0.
+    pgsql_execute_script "@abs_top_srcdir@/src/bin/admin/tests/dhcpdb_create_1.0.pgsql"
+    assert_eq 0 "${EXIT_CODE}" "cannot initialize 1.0 database, expected exit code: %d, actual: %d"
+
+    # Now upgrade to schema 21.0
+    pgsql_upgrade_schema_to_version 21.0
+
+    # Now insert global parameter instances of reservation_mode.
+    sql=\
+"select set_config('kea.disable_audit', 'true', false);\
+ insert into dhcp4_global_parameter (name,value,modification_ts,parameter_type)\
+    values ('reservation-mode','off',current_timestamp,4);
+ insert into dhcp6_global_parameter (name,value,modification_ts,parameter_type)\
+    values ('reservation-mode','off',current_timestamp,4);"
+
+    run_statement "insert reservation_mode parameters" "$sql"
+
+    # Verify the inserted record counts.
+    qry="select count(*) from dhcp4_global_parameter where name like '%reservation-mode%';"
+    run_statement "#get 4_global parameter count before update" "$qry" 1
+
+    qry="select count(*) from dhcp6_global_parameter where name like '%reservation-mode%';"
+    run_statement "#get 6_global parameter count before update" "$qry" 1
+
+    qry="select count(*) from dhcp4_global_parameter where name='reservations-in-subnet' AND value='0' AND parameter_type=2;"
+    run_statement "#get exact 4_global parameter count before update" "$qry" 0
+
+    qry="select count(*) from dhcp6_global_parameter where name='reservations-in-subnet' AND value='0' AND parameter_type=2;"
+    run_statement "#get exact 6_global parameter count before update" "$qry" 0
+
+    # Upgrade to schema 22.0
+    pgsql_upgrade_schema_to_version 22.0
+
+    # Verify the record have been removed.
+    qry="select count(*) from dhcp4_global_parameter where name like '%reservation-mode%';"
+    run_statement "#get 4_global parameter count after update" "$qry" 0
+
+    qry="select count(*) from dhcp6_global_parameter where name like '%reservation-mode%';"
+    run_statement "#get 6_global parameter count after update" "$qry" 0
+
+    qry="select count(*) from dhcp4_global_parameter where name='reservations-in-subnet' AND value='0' AND parameter_type=2;"
+    run_statement "#get exact 4_global parameter count after update" "$qry" 1
+
+    qry="select count(*) from dhcp6_global_parameter where name='reservations-in-subnet' AND value='0' AND parameter_type=2;"
+    run_statement "#get exact 6_global parameter count after update" "$qry" 1
+
+    # Let's wipe the whole database
+    pgsql_wipe
+
+    test_finish 0
+}
+
+# Verifies that deprecated reservation_mode "all" is migrated.
+pgsql_reservation_mode_all_parameters_test() {
+    test_start "pgsql.reservation_mode_all_parameters_test"
+
+    # Let's wipe the whole database
+    pgsql_wipe
+
+    # We need to create an older database with lease data so we can
+    # verify the upgrade mechanisms which prepopulate the lease stat
+    # tables.
+    #
+    # Initialize database to schema 1.0.
+    pgsql_execute_script "@abs_top_srcdir@/src/bin/admin/tests/dhcpdb_create_1.0.pgsql"
+    assert_eq 0 "${EXIT_CODE}" "cannot initialize 1.0 database, expected exit code: %d, actual: %d"
+
+    # Now upgrade to schema 21.0
+    pgsql_upgrade_schema_to_version 21.0
+
+    # Now insert global parameter instances of reservation_mode.
+    sql=\
+"select set_config('kea.disable_audit', 'true', false);\
+ insert into dhcp4_global_parameter (name,value,modification_ts,parameter_type)\
+    values ('reservation-mode','all',current_timestamp,4);
+ insert into dhcp6_global_parameter (name,value,modification_ts,parameter_type)\
+    values ('reservation-mode','all',current_timestamp,4);"
+
+    run_statement "insert reservation_mode parameters" "$sql"
+
+    # Verify the inserted record counts.
+    qry="select count(*) from dhcp4_global_parameter where name like '%reservation-mode%';"
+    run_statement "#get 4_global parameter count before update" "$qry" 1
+
+    qry="select count(*) from dhcp6_global_parameter where name like '%reservation-mode%';"
+    run_statement "#get 6_global parameter count before update" "$qry" 1
+
+    qry="select count(*) from dhcp4_global_parameter where name='reservations-in-subnet' AND value='1' AND parameter_type=2;"
+    run_statement "#get exact 4_global parameter count before update" "$qry" 0
+
+    qry="select count(*) from dhcp6_global_parameter where name='reservations-in-subnet' AND value='1' AND parameter_type=2;"
+    run_statement "#get exact 6_global parameter count before update" "$qry" 0
+
+    # Upgrade to schema 22.0
+    pgsql_upgrade_schema_to_version 22.0
+
+    # Verify the record have been removed.
+    qry="select count(*) from dhcp4_global_parameter where name like '%reservation-mode%';"
+    run_statement "#get 4_global parameter count after update" "$qry" 0
+
+    qry="select count(*) from dhcp6_global_parameter where name like '%reservation-mode%';"
+    run_statement "#get 6_global parameter count after update" "$qry" 0
+
+    qry="select count(*) from dhcp4_global_parameter where name='reservations-in-subnet' AND value='1' AND parameter_type=2;"
+    run_statement "#get exact 4_global parameter count after update" "$qry" 1
+
+    qry="select count(*) from dhcp6_global_parameter where name='reservations-in-subnet' AND value='1' AND parameter_type=2;"
+    run_statement "#get exact 6_global parameter count after update" "$qry" 1
+
+    # Let's wipe the whole database
+    pgsql_wipe
+
+    test_finish 0
+}
+
+# Verifies that deprecated reservation_mode "global" is migrated.
+pgsql_reservation_mode_global_parameters_test() {
+    test_start "pgsql.reservation_mode_global_parameters_test"
+
+    # Let's wipe the whole database
+    pgsql_wipe
+
+    # We need to create an older database with lease data so we can
+    # verify the upgrade mechanisms which prepopulate the lease stat
+    # tables.
+    #
+    # Initialize database to schema 1.0.
+    pgsql_execute_script "@abs_top_srcdir@/src/bin/admin/tests/dhcpdb_create_1.0.pgsql"
+    assert_eq 0 "${EXIT_CODE}" "cannot initialize 1.0 database, expected exit code: %d, actual: %d"
+
+    # Now upgrade to schema 21.0
+    pgsql_upgrade_schema_to_version 21.0
+
+    # Now insert global parameter instances of reservation_mode.
+    sql=\
+"select set_config('kea.disable_audit', 'true', false);\
+ insert into dhcp4_global_parameter (name,value,modification_ts,parameter_type)\
+    values ('reservation-mode','global',current_timestamp,4);
+ insert into dhcp6_global_parameter (name,value,modification_ts,parameter_type)\
+    values ('reservation-mode','global',current_timestamp,4);"
+
+    run_statement "insert reservation_mode parameters" "$sql"
+
+    # Verify the inserted record counts.
+    qry="select count(*) from dhcp4_global_parameter where name like '%reservation-mode%';"
+    run_statement "#get 4_global parameter count before update" "$qry" 1
+
+    qry="select count(*) from dhcp6_global_parameter where name like '%reservation-mode%';"
+    run_statement "#get 6_global parameter count before update" "$qry" 1
+
+    qry="select count(*) from dhcp4_global_parameter where name='reservations-global' AND value='1' AND parameter_type=2;"
+    run_statement "#get exact 4_global parameter count before update" "$qry" 0
+
+    qry="select count(*) from dhcp6_global_parameter where name='reservations-global' AND value='1' AND parameter_type=2;"
+    run_statement "#get exact 6_global parameter count before update" "$qry" 0
+
+    # Upgrade to schema 22.0
+    pgsql_upgrade_schema_to_version 22.0
+
+    # Verify the record have been removed.
+    qry="select count(*) from dhcp4_global_parameter where name like '%reservation-mode%';"
+    run_statement "#get 4_global parameter count after update" "$qry" 0
+
+    qry="select count(*) from dhcp6_global_parameter where name like '%reservation-mode%';"
+    run_statement "#get 6_global parameter count after update" "$qry" 0
+
+    qry="select count(*) from dhcp4_global_parameter where name='reservations-global' AND value='1' AND parameter_type=2;"
+    run_statement "#get exact 4_global parameter count after update" "$qry" 1
+
+    qry="select count(*) from dhcp6_global_parameter where name='reservations-global' AND value='1' AND parameter_type=2;"
+    run_statement "#get exact 6_global parameter count after update" "$qry" 1
+
+    # Let's wipe the whole database
+    pgsql_wipe
+
+    test_finish 0
+}
+
+# Verifies that deprecated reservation_mode "out-of-pool" is migrated.
+pgsql_reservation_mode_out_of_pool_parameters_test() {
+    test_start "pgsql.reservation_mode_out_of_pool_parameters_test"
+
+    # Let's wipe the whole database
+    pgsql_wipe
+
+    # We need to create an older database with lease data so we can
+    # verify the upgrade mechanisms which prepopulate the lease stat
+    # tables.
+    #
+    # Initialize database to schema 1.0.
+    pgsql_execute_script "@abs_top_srcdir@/src/bin/admin/tests/dhcpdb_create_1.0.pgsql"
+    assert_eq 0 "${EXIT_CODE}" "cannot initialize 1.0 database, expected exit code: %d, actual: %d"
+
+    # Now upgrade to schema 21.0
+    pgsql_upgrade_schema_to_version 21.0
+
+    # Now insert global parameter instances of reservation_mode.
+    sql=\
+"select set_config('kea.disable_audit', 'true', false);\
+ insert into dhcp4_global_parameter (name,value,modification_ts,parameter_type)\
+    values ('reservation-mode','out-of-pool',current_timestamp,4);
+ insert into dhcp6_global_parameter (name,value,modification_ts,parameter_type)\
+    values ('reservation-mode','out-of-pool',current_timestamp,4);"
+
+    run_statement "insert reservation_mode parameters" "$sql"
+
+    # Verify the inserted record counts.
+    qry="select count(*) from dhcp4_global_parameter where name like '%reservation-mode%';"
+    run_statement "#get 4_global parameter count before update" "$qry" 1
+
+    qry="select count(*) from dhcp6_global_parameter where name like '%reservation-mode%';"
+    run_statement "#get 6_global parameter count before update" "$qry" 1
+
+    qry="select count(*) from dhcp4_global_parameter where name='reservations-out-of-pool' AND value='1' AND parameter_type=2;"
+    run_statement "#get exact 4_global parameter count before update" "$qry" 0
+
+    qry="select count(*) from dhcp6_global_parameter where name='reservations-out-of-pool' AND value='1' AND parameter_type=2;"
+    run_statement "#get exact 6_global parameter count before update" "$qry" 0
+
+    # Upgrade to schema 22.0
+    pgsql_upgrade_schema_to_version 22.0
+
+    # Verify the record have been removed.
+    qry="select count(*) from dhcp4_global_parameter where name like '%reservation-mode%';"
+    run_statement "#get 4_global parameter count after update" "$qry" 0
+
+    qry="select count(*) from dhcp6_global_parameter where name like '%reservation-mode%';"
+    run_statement "#get 6_global parameter count after update" "$qry" 0
+
+    qry="select count(*) from dhcp4_global_parameter where name='reservations-out-of-pool' AND value='1' AND parameter_type=2;"
+    run_statement "#get exact 4_global parameter count after update" "$qry" 1
+
+    qry="select count(*) from dhcp6_global_parameter where name='reservations-out-of-pool' AND value='1' AND parameter_type=2;"
+    run_statement "#get exact 6_global parameter count after update" "$qry" 1
+
+    # Let's wipe the whole database
+    pgsql_wipe
+
+    test_finish 0
+}
+
+# Verifies that OPT_RECORD_TYPE values are updated
+pgsql_migrate_opt_record_type() {
+    test_start "pgsql.migrate_opt_record_type"
+
+    # Let's wipe the whole database
+    pgsql_wipe
+
+    # We need to create an older database with lease data so we can
+    # verify the upgrade mechanisms which prepopulate the lease stat
+    # tables.
+    #
+    # Initialize database to schema 1.0.
+    pgsql_execute_script "@abs_top_srcdir@/src/bin/admin/tests/dhcpdb_create_1.0.pgsql"
+    assert_eq 0 "${EXIT_CODE}" "cannot initialize 1.0 database, expected exit code: %d, actual: %d"
+
+    # Now upgrade to schema 23.0
+    pgsql_upgrade_schema_to_version 23.0
+
+    # Now insert option definitions.
+    sql=\
+"select set_config('kea.disable_audit', 'true', false);\
+ insert into dhcp4_option_def (code,name,space,type,modification_ts,record_types, is_array, encapsulate)\
+    values ('222','foo','dhcp4',17,current_timestamp,NULL, false, false);\
+ insert into dhcp4_option_def (code,name,space,type,modification_ts,record_types, is_array, encapsulate)\
+    values ('223','bar','dhcp4',17,current_timestamp,'10, 7, 2, 14', false, false);\
+ insert into dhcp4_option_def (code,name,space,type,modification_ts,record_types, is_array, encapsulate)\
+    values ('224','bar2','dhcp4',18,current_timestamp,'10, 7, 2, 14', false, false);
+ insert into dhcp6_option_def (code,name,space,type,modification_ts,record_types, is_array, encapsulate)\
+    values ('222','foo','dhcp6',17,current_timestamp,NULL, false, false);\
+ insert into dhcp6_option_def (code,name,space,type,modification_ts,record_types, is_array, encapsulate)\
+    values ('223','bar','dhcp6',17,current_timestamp,'10, 7, 2, 14', false, false);\
+ insert into dhcp6_option_def (code,name,space,type,modification_ts,record_types, is_array, encapsulate)\
+    values ('224','bar2','dhcp6',18,current_timestamp,'10, 7, 2, 14', false, false);
+"
+    run_statement "insert option definitions" "$sql"
+
+    # Verify the inserted record counts.
+    qry="select count(*) from dhcp4_option_def;"
+    run_statement "#get 4_option_def_count before update" "$qry" 3
+
+    qry="select count(*) from dhcp6_option_def;"
+    run_statement "#get 6_option_def_count before update" "$qry" 3
+
+    # Upgrade to schema 24.0
+    pgsql_upgrade_schema_to_version 24.0
+
+    # Verify the migrated records.
+    qry="select type from dhcp4_option_def where name = 'foo';"
+    run_statement "#get 4_option_def_foo after update" "$qry" 17
+
+    qry="select type from dhcp4_option_def where name = 'bar';"
+    run_statement "#get 4_option_def_bar after update" "$qry" 254
+
+    qry="select type from dhcp4_option_def where name = 'bar2';"
+    run_statement "#get 4_option_def_bar2 after update" "$qry" 254
+
+    qry="select type from dhcp6_option_def where name = 'foo';"
+    run_statement "#get 6_option_def_foo after update" "$qry" 17
+
+    qry="select type from dhcp6_option_def where name = 'bar';"
+    run_statement "#get 6_option_def_bar after update" "$qry" 254
+
+    qry="select type from dhcp6_option_def where name = 'bar2';"
+    run_statement "#get 6_option_def_bar2 after update" "$qry" 254
+
+    # Let's wipe the whole database
+    pgsql_wipe
+
+    test_finish 0
+}
+
+# Verifies that control-socket global map parameters are removed.
+pgsql_remove_control_socket_parameters_test() {
+    test_start "pgsql.pgsql_remove_control_socket_parameters_test"
+
+    # Let's wipe the whole database
+    pgsql_wipe
+
+    # We need to create an older database with lease data so we can
+    # verify the upgrade mechanisms which prepopulate the lease stat
+    # tables.
+    #
+    # Initialize database to schema 1.0.
+    pgsql_execute_script "@abs_top_srcdir@/src/bin/admin/tests/dhcpdb_create_1.0.pgsql"
+    assert_eq 0 "${EXIT_CODE}" "cannot initialize 1.0 database, expected exit code: %d, actual: %d"
+
+    # Now upgrade to schema 23.0
+    pgsql_upgrade_schema_to_version 23.0
+
+    # Now insert global parameter instances of control-socket.
+    sql=\
+"select set_config('kea.disable_audit', 'true', false);\
+ insert into dhcp4_global_parameter (name,value,modification_ts,parameter_type)\
+    values ('control-socket.socket-name','/tmp/socket',current_timestamp,4);
+ insert into dhcp4_global_parameter (name,value,modification_ts,parameter_type)\
+    values ('control-socket.socket-type','unix',current_timestamp,4);
+ insert into dhcp6_global_parameter (name,value,modification_ts,parameter_type)\
+    values ('control-socket.socket-name','/tmp/socket',current_timestamp,4);
+ insert into dhcp6_global_parameter (name,value,modification_ts,parameter_type)\
+    values ('control-socket.socket-type','unix',current_timestamp,4);"
+
+    run_statement "insert control-socket map parameters" "$sql"
+
+    # Verify the inserted record counts.
+    qry="select count(*) from dhcp4_global_parameter where name like '%control-socket%';"
+    run_statement "#get 4_global parameter count before update" "$qry" 2
+
+    qry="select count(*) from dhcp6_global_parameter where name like '%control-socket%';"
+    run_statement "#get 6_global parameter count before update" "$qry" 2
+
+    # Upgrade to schema 24.0
+    pgsql_upgrade_schema_to_version 24.0
+
+    # Verify the record have been removed.
+    qry="select count(*) from dhcp4_global_parameter where name like '%control-socket%';"
+    run_statement "#get 4_global parameter count after update" "$qry" 0
+
+    qry="select count(*) from dhcp6_global_parameter where name like '%control-socket%';"
+    run_statement "#get 6_global parameter count after update" "$qry" 0
+
+    # Let's wipe the whole database
+    pgsql_wipe
+
+    test_finish 0
+}
+
+# Verifies that client_class to client_classes migrates
+# single text entries to JSON list correctly
+pgsql_migrate_client_class_test() {
+
+    test_start "pgsql.pgsql_migrate_client_class_test"
+
+    # Let's wipe the whole database
+    pgsql_wipe
+
+    # We need to create an older database with lease data so we can
+    # verify the upgrade mechanisms which prepopulate the lease stat
+    # tables.
+    #
+    # Initialize database to schema 1.0.
+    pgsql_execute_script "@abs_top_srcdir@/src/bin/admin/tests/dhcpdb_create_1.0.pgsql"
+    assert_eq 0 "${EXIT_CODE}" "cannot initialize 1.0 database, expected exit code: %d, actual: %d"
+
+    # Now upgrade to schema 26.0
+    pgsql_upgrade_schema_to_version 26.0
+
+    # Now we need insert some leases to "migrate" for both v4 and v6
+    qry="\
+ select set_config('kea.disable_audit', 'true', false);\
+ insert into dhcp4_shared_network (name, client_class, modification_ts) values ('net1', 'abc', current_timestamp);\
+ insert into dhcp4_shared_network (name, client_class, modification_ts) values ('net2', '', current_timestamp);\
+ insert into dhcp4_shared_network (name, modification_ts) values ('net3', current_timestamp);\
+ insert into dhcp4_subnet (subnet_id, subnet_prefix, modification_ts, client_class)\
+    values (1, '192.0.0.0/24', current_timestamp, 'subber');\
+ insert into dhcp4_pool (subnet_id, start_address, end_address, modification_ts, client_class)\
+    values (1, '192.0.0.0', '192.0.0.1', current_timestamp, 'poolio');\
+ insert into dhcp6_shared_network (name, client_class, modification_ts) values ('net6', 'xyz', current_timestamp);\
+ insert into dhcp6_subnet (subnet_id, subnet_prefix, modification_ts, client_class)\
+    values (6, '2001:db8:1::/64', current_timestamp, 'subber6');\
+ insert into dhcp6_pool (subnet_id, start_address, end_address, modification_ts, client_class)\
+    values (6, '2001:db8:1::1', '2001:db8:1::2', current_timestamp, 'poolio6');\
+ insert into dhcp6_pd_pool (subnet_id, prefix, prefix_length, delegated_prefix_length, \
+                            excluded_prefix_length, modification_ts, client_class) \
+    values (6, ('3001::'), 64, 72, 0, current_timestamp, 'pd_poolio');\
+ select set_config('kea.disable_audit', 'false', false);\
+ "
+    run_statement "insert test data" "$qry"
+
+    # Let's upgrade it to the latest version.
+    pgsql_upgrade_schema_to_version 27.0
+
+    # Verify dhcp4_shared_network values
+    qry="select count(name) from dhcp4_shared_network where name = 'net1' and client_classes = '[ \"abc\" ]';"
+    run_statement "#1" "$qry" 1
+
+    qry="select count(name) from dhcp4_shared_network where name = 'net2' and client_classes IS NULL;"
+    run_statement "#2" "$qry" 1
+
+    qry="select count(name) from dhcp4_shared_network where name = 'net3' and client_classes IS NULL;"
+    run_statement "#3" "$qry" 1
+
+    # We don't bother verifying all null and '' handling again, only that the conversion function is
+    # called for remaining tables.
+
+    # Verify dhcp4_subnet.
+    qry="select count(subnet_id) from dhcp4_subnet where subnet_id = 1 and client_classes = '[ \"subber\" ]';"
+    run_statement "#4" "$qry" 1
+
+    # Verify dhcp4_pool.
+    qry="select count(subnet_id) from dhcp4_pool where subnet_id = 1 and client_classes = '[ \"poolio\" ]';"
+    run_statement "#5" "$qry" 1
+
+    # Verify dhcp6_shared_network.
+    qry="select count(name) from dhcp6_shared_network where name = 'net6' and client_classes = '[ \"xyz\" ]';"
+    run_statement "#6" "$qry" 1
+
+    # Verify dhcp6_subnet.
+    qry="select count(subnet_id) from dhcp6_subnet where subnet_id = 6 and client_classes = '[ \"subber6\" ]';"
+    run_statement "#7" "$qry" 1
+
+    # Verify dhcp6_pool.
+    qry="select count(subnet_id) from dhcp6_pool where subnet_id = 6 and client_classes = '[ \"poolio6\" ]';"
+    run_statement "#8" "$qry" 1
+
+    # Verify dhcp6_pd_pool.
+    qry="select count(subnet_id) from dhcp6_pd_pool where subnet_id = 6 and client_classes = '[ \"pd_poolio\" ]';"
+    run_statement "#9" "$qry" 1
+
+    pgsql_wipe
+
+    test_finish 0
+}
+
+# Verifies migration of dhcpX_options.client_classes column to not null.
+pgsql_migrate_dhcpX_options_client_classes() {
+    test_start "pgsql.pgsql_migrate_dhcpX_options_client_classes"
+
+    # Let's wipe the whole database
+    pgsql_wipe
+
+    # We need to create an older database with lease data so we can
+    # verify the upgrade mechanisms which prepopulate the lease stat
+    # tables.
+    #
+    # Initialize database to schema 1.0.
+    pgsql_execute_script "@abs_top_srcdir@/src/bin/admin/tests/dhcpdb_create_1.0.pgsql"
+    assert_eq 0 "${EXIT_CODE}" "cannot initialize 1.0 database, expected exit code: %d, actual: %d"
+
+    # Now upgrade to schema 29.0
+    pgsql_upgrade_schema_to_version 29.0
+
+    # Now insert options.
+    sql="\
+    select set_config('kea.disable_audit', 'true', false);\
+    insert into dhcp4_options (scope_id, code, space, formatted_value, modification_ts) \
+        values (0, '222', 'dhcp4', 'foo' , current_timestamp); \
+    insert into dhcp4_options (scope_id, code, space, formatted_value, client_classes, modification_ts) \
+        values (0, '223', 'dhcp4', 'bar' , '[ \"cc-one\" ]', current_timestamp); \
+    insert into dhcp6_options (scope_id, code, space, formatted_value, modification_ts) \
+        values (0, '222', 'dhcp6', 'foo' , current_timestamp); \
+    insert into dhcp6_options (scope_id, code, space, formatted_value, client_classes, modification_ts) \
+        values (0, '223', 'dhcp6', 'bar' , '[ \"cc-one\" ]', current_timestamp); \
+    select set_config('kea.disable_audit', 'false', false);"
+
+    run_statement "insert option" "$sql"
+
+    # Verify the inserted record counts.
+    qry="select count(*) from dhcp4_options;"
+    run_statement "#get 4_option_count before update" "$qry" 2
+
+    qry="select count(*) from dhcp6_options;"
+    run_statement "#get 6_option_count before update" "$qry" 2
+
+    # Upgrade to schema 30.0
+    pgsql_upgrade_schema_to_version 30.0
+
+    # Verify the migrated records.
+    qry="select code from dhcp4_options where client_classes = '[  ]';"
+    run_statement "#get 4_option_foo after update" "$qry" 222
+
+    qry="select code from dhcp4_options where client_classes = '[ \"cc-one\" ]';"
+    run_statement "#get 4_option_foo after update" "$qry" 223
+
+    qry="select code from dhcp6_options where client_classes = '[  ]';"
+    run_statement "#get 6_option_foo after update" "$qry" 222
+
+    qry="select code from dhcp6_options where client_classes = '[ \"cc-one\" ]';"
+    run_statement "#get 6_option_foo after update" "$qry" 223
+
+    # Let's wipe the whole database
+    pgsql_wipe
+
+    test_finish 0
+}
+
+# Verifies sflqCreateFlqPool4 function
+pgsql_sflqCreateFlqPool4() {
+    test_start "pgsql.pgsql_sflqCreateFlqPool4"
+
+    # Let's wipe the whole database
+    pgsql_wipe
+
+    # Create the database
+    run_command \
+        "${kea_admin}" db-init pgsql -u "${db_user}" -p "${db_password}" -n "${db_name}" -d "${db_scripts_dir}"
+    assert_eq 0 "${EXIT_CODE}" "cannot initialize the database, expected exit code: %d, actual: %d"
+
+    # Get a future timestamp
+    sql="select (CURRENT_TIMESTAMP + make_interval(secs => 3600))"
+    run_statement "get expired time stamp" "$sql"
+    future="${OUTPUT}"
+
+    # Get an expired timestamp
+    sql="select (CURRENT_TIMESTAMP - make_interval(secs => 3600))"
+    run_statement "get expired time stamp" "$sql"
+    expired="${OUTPUT}"
+
+    # Insert an assigned lease
+    in_address="('127.0.0.1'::inet - '0.0.0.0'::inet)"
+    sql="insert into lease4 (address, subnet_id, valid_lifetime, expire, state) \
+            values ($in_address, 1, 3600, '$future'::timestamp, 0)";
+    run_statement "insert 127.0.0.1" "$sql"  "";
+
+    # Insert a declined lease
+    in_address="('127.0.0.3'::inet - '0.0.0.0'::inet)"
+    sql="insert into lease4 (address, subnet_id, valid_lifetime, expire, state) \
+            values ($in_address, 1, 3600, '$future'::timestamp, 1)";
+    run_statement "insert 127.0.0.3" "$sql"  "";
+
+    # Insert an expired lease
+    in_address="('127.0.0.5'::inet - '0.0.0.0'::inet)"
+    sql="insert into lease4 (address, subnet_id, valid_lifetime, expire, state) \
+            values ($in_address, 1, 3600, '$expired'::timestamp, 0)";
+    run_statement "insert 127.0.0.5" "$sql"  "";
+
+    # Insert reclaimed lease
+    in_address="('127.0.0.7'::inet - '0.0.0.0'::inet)"
+    sql="insert into lease4 (address, subnet_id, valid_lifetime, expire, state) \
+            values ($in_address, 1, 3600, '$future'::timestamp, 2)";
+
+    run_statement "insert 127.0.0.7" "$sql"  "";
+
+    start_address="('127.0.0.0'::inet - '0.0.0.0'::inet)"
+    end_address="('127.0.0.8'::inet - '0.0.0.0'::inet)"
+    sql="select sflqCreateFlqPool4($start_address, $end_address, 1, false)"
+    run_statement "sflqCreateFlqPool4" "$sql"
+
+    sql="select count(address) from lease4 where ('0.0.0.0'::inet + address) in\
+         ('127.0.0.1','127.0.0.3','127.0.0.5','127.0.0.7')"
+    run_statement "select leases4" "$sql" "4"
+
+    sql="select count(address) from free_lease4 where ('0.0.0.0'::inet + address) in\
+         ('127.0.0.0','127.0.0.2','127.0.0.4',\
+          '127.0.0.6','127.0.0.7','127.0.0.8')"
+    run_statement "select free_leases4" "$sql" "6"
+
+    # Let's wipe the whole database
+    pgsql_wipe
+
+    test_finish 0
+}
+
+# Verifies sflqCreateFlqPool4 parameter validation
+pgsql_sflqCreateFlqPool4Invalid() {
+    test_start "pgsql.pgsql_sflqCreateFlqPool4Invalid"
+
+    # Let's wipe the whole database
+    pgsql_wipe
+
+    # Create the database
+    run_command \
+        "${kea_admin}" db-init pgsql -u "${db_user}" -p "${db_password}" -n "${db_name}" -d "${db_scripts_dir}"
+    assert_eq 0 "${EXIT_CODE}" "cannot initialize the database, expected exit code: %d, actual: %d"
+
+    # Start address of 0.0.0.0 is invalid
+    export KEA_EXPECTED_EXIT_CODE="3"
+    sql="select sflqCreateFlqPool4(('0.0.0.0'::inet - '0.0.0.0'::inet),
+                                 ('127.0.0.8'::inet - '0.0.0.0'::inet), 1, false)"
+    run_statement "sflqCreateFlqPool4" "$sql"
+    unset KEA_EXPECTED_EXIT_CODE
+
+    # Start address  larger than end address is invalid
+    export KEA_EXPECTED_EXIT_CODE="3"
+    sql="select sflqCreateFlqPool4(('127.0.0.8'::inet - '0.0.0.0'::inet),
+                                 ('127.0.0.0'::inet - '0.0.0.0'::inet), 1, false)"
+    run_statement "sflqCreateFlqPool4" "$sql"
+    unset KEA_EXPECTED_EXIT_CODE
+
+    # Let's wipe the whole database
+    pgsql_wipe
+
+    test_finish 0
+}
+
+# Verifies sflqPickFreeLease4 function
+pgsql_sflqPickFreeLease4() {
+    test_start "pgsql.pgsql_sflqPickFreeLease4"
+
+    # Let's wipe the whole database
+    pgsql_wipe
+
+    # Create the database
+    run_command \
+        "${kea_admin}" db-init pgsql -u "${db_user}" -p "${db_password}" -n "${db_name}" -d "${db_scripts_dir}"
+    assert_eq 0 "${EXIT_CODE}" "cannot initialize the database, expected exit code: %d, actual: %d"
+
+    start_address="('127.0.0.0'::inet - '0.0.0.0'::inet)"
+    end_address="('127.0.0.2'::inet - '0.0.0.0'::inet)"
+    sql="select sflqCreateFlqPool4($start_address, $end_address, 1::bigint, false)"
+    run_statement "sflqCreateFlqPool4" "$sql"
+
+    sql="select ('0.0.0.0'::inet + sflqPickFreeLease4($start_address, $end_address))"
+    run_statement "sflqPickFreeLease4.1" "$sql"  "127.0.0.0";
+    run_statement "sflqPickFreeLease4.2" "$sql"  "127.0.0.1";
+    run_statement "sflqPickFreeLease4.3" "$sql"  "127.0.0.2";
+
+    # Inserting a lease directly. Pick should still see it.
+    sql="insert into lease4 (address, subnet_id) values ('127.0.0.1'::inet - '0.0.0.0'::inet, 1)";
+    run_statement "insert 127.0.0.1" "$sql"  "";
+
+    # Inserting an active lease directly. Pick should still see it.
+    sql="select ('0.0.0.0'::inet + sflqPickFreeLease4($start_address, $end_address))"
+    run_statement "sflqPickFreeLease4.4" "$sql"  "127.0.0.0";
+    run_statement "sflqPickFreeLease4.5" "$sql"  "127.0.0.1";
+    run_statement "sflqPickFreeLease4.6" "$sql"  "127.0.0.2";
+
+    # Updating a lease directly. Pick should still see it.
+    sql="update lease4 set state = 2 where address = ('127.0.0.1'::inet - '0.0.0.0'::inet);"
+    run_statement "update 127.0.0.1" "$sql"  "";
+
+    sql="select ('0.0.0.0'::inet + sflqPickFreeLease4($start_address, $end_address))"
+    run_statement "sflqPickFreeLease4.7" "$sql"  "127.0.0.0";
+    run_statement "sflqPickFreeLease4.8" "$sql"  "127.0.0.1";
+    run_statement "sflqPickFreeLease4.9" "$sql"  "127.0.0.2";
+
+    # Deleting a lease directly. Pick should still see it.
+    sql="delete from lease4"
+    run_statement "delete 127.0.0.1" "$sql"  "";
+
+    sql="select ('0.0.0.0'::inet + sflqPickFreeLease4($start_address, $end_address))"
+    run_statement "sflqPickFreeLease4.10" "$sql"  "127.0.0.0";
+    run_statement "sflqPickFreeLease4.11" "$sql"  "127.0.0.1";
+    run_statement "sflqPickFreeLease4.12" "$sql"  "127.0.0.2";
+
+    # Check pools with one address.
+    address="('192.0.2.0'::inet - '0.0.0.0'::inet)"
+    sql="select sflqCreateFlqPool4(${address}, ${address}, 1::bigint, false)"
+    run_statement "sflqCreateFlqPool4.2" "${sql}"
+    sql="select ('0.0.0.0'::inet + sflqPickFreeLease4(${address}, ${address}))"
+    run_statement "sflqPickFreeLease4.13" "${sql}" "192.0.2.0";
+    # Rolling over results in the same address when there is only one.
+    run_statement "sflqPickFreeLease4.14" "${sql}" "192.0.2.0";
+
+    # Check picking 255.255.255.255.
+    address="('255.255.255.255'::inet - '0.0.0.0'::inet)"
+    sql="select sflqCreateFlqPool4(${address}, ${address}, 1::bigint, false)"
+    run_statement "sflqCreateFlqPool4.4" "${sql}"
+    sql="select ('0.0.0.0'::inet + sflqPickFreeLease4(${address}, ${address}))"
+    run_statement "sflqPickFreeLease4.17" "${sql}" "255.255.255.255";
+    run_statement "sflqPickFreeLease4.18" "${sql}" "255.255.255.255";
+
+    # Let's wipe the whole database
+    pgsql_wipe
+
+    test_finish 0
+}
+
+# Verifies SFLQ sflqCreateFlqPool6 function
+pgsql_sflqCreateFlqPool6() {
+    test_start "pgsql.pgsql_sflqCreateFlqPool6"
+
+    # Let's wipe the whole database
+    pgsql_wipe
+
+    # Create the database
+    run_command \
+        "${kea_admin}" db-init pgsql -u "${db_user}" -p "${db_password}" -n "${db_name}" -d "${db_scripts_dir}"
+    assert_eq 0 "${EXIT_CODE}" "cannot initialize the database, expected exit code: %d, actual: %d"
+
+    # Get a future timestamp
+    sql="select (CURRENT_TIMESTAMP + make_interval(secs => 3600))"
+    run_statement "get expired time stamp" "$sql"
+    future="${OUTPUT}"
+
+    # Get an expired timestamp
+    sql="select (CURRENT_TIMESTAMP - make_interval(secs => 3600))"
+    run_statement "get expired time stamp" "$sql"
+    expired="${OUTPUT}"
+
+    # Insert an assigned lease
+    sql="insert into lease6 (address, lease_type, subnet_id, valid_lifetime, expire, state) \
+            values ('3001::1'::inet, 0, 1, 3600, '$future'::timestamp, 0)";
+    run_statement "insert 3001::1" "$sql"  "";
+
+    # Insert a declined lease
+    sql="insert into lease6 (address, lease_type, subnet_id, valid_lifetime, expire, state) \
+            values ('3001::3'::inet, 0, 1, 3600, '$future'::timestamp, 1)";
+    run_statement "insert 3001::3" "$sql"  "";
+
+    # Insert an expired lease
+    sql="insert into lease6 (address, lease_type, subnet_id, valid_lifetime, expire, state) \
+            values ('3001::5'::inet, 0, 1, 3600, '$expired'::timestamp, 0)";
+    run_statement "insert 3001::5" "$sql"  "";
+
+    # Insert reclaimed lease
+    sql="insert into lease6 (address, lease_type, subnet_id, valid_lifetime, expire, state) \
+            values ('3001::7'::inet, 0, 1, 3600, '$future'::timestamp, 2)";
+    run_statement "insert 3001::7" "$sql"  "";
+
+    sql="select sflqCreateFlqPool6('3001::'::inet, '3001::8'::inet, 0::smallint, 128::smallint,\
+                                 1::bigint, false)"
+    run_statement "sflqCreateFlqPool6" "$sql"
+
+    sql="select count(address) from lease6 where address in\
+         ('3001::1','3001::3','3001::5','3001::7')"
+    run_statement "select leases4" "$sql" "4"
+
+    sql="select count(address) from free_lease6 where address in\
+         ('3001::','3001::2','3001::4',\
+          '3001::6','3001::7','3001::8')"
+    run_statement "select free_leases6" "$sql" "6"
+
+    # Let's wipe the whole database
+    pgsql_wipe
+
+    test_finish 0
+}
+
+# Verifies sflqCreateFlqPool6 parameter validation
+pgsql_sflqCreateFlqPool6Invalid() {
+    test_start "pgsql.pgsql_sflqCreateFlqPool6Invalid"
+
+    # Let's wipe the whole database
+    pgsql_wipe
+
+    # Create the database
+    run_command \
+        "${kea_admin}" db-init pgsql -u "${db_user}" -p "${db_password}" -n "${db_name}" -d "${db_scripts_dir}"
+    assert_eq 0 "${EXIT_CODE}" "cannot initialize the database, expected exit code: %d, actual: %d"
+
+    # Cannot use :: as a start.
+    export KEA_EXPECTED_EXIT_CODE="3"
+    sql="select sflqCreateFlqPool6('::'::inet, '::1'::inet, 2, 128, 1, false)"
+    run_statement "sflqCreateFlqPool6.3" "${sql}"
+    unset KEA_EXPECTED_EXIT_CODE
+
+    # Cannot start cannot be greater than end.
+    export KEA_EXPECTED_EXIT_CODE="3"
+    sql="select sflqCreateFlqPool6('::2'::inet, '::1'::inet, 2, 128, 1, false)"
+    run_statement "sflqCreateFlqPool6.3" "${sql}"
+    unset KEA_EXPECTED_EXIT_CODE
+
+    # Cannot specify delegated_len < 1
+    export KEA_EXPECTED_EXIT_CODE="3"
+    sql="select sflqCreateFlqPool6('::1::inet', '::2::inet', 2, 0, 1, false)"
+    run_statement "sflqCreateFlqPool6.3" "${sql}"
+    unset KEA_EXPECTED_EXIT_CODE
+
+    # Cannot specify delegated_len > 128
+    export KEA_EXPECTED_EXIT_CODE="3"
+    sql="select sflqCreateFlqPool6('::1'::inet, '::2'::inet, 2, 129, 1, false)"
+    run_statement "sflqCreateFlqPool6.3" "${sql}"
+    unset KEA_EXPECTED_EXIT_CODE
+
+    # Let's wipe the whole database
+    pgsql_wipe
+
+    test_finish 0
+}
+
+
+# Verifies sflqPickFreeLease6 function
+pgsql_sflqPickFreeLease6() {
+    test_start "pgsql.pgsql_sflqPickFreeLease6"
+
+    # Let's wipe the whole database
+    pgsql_wipe
+
+    # Create the database
+    run_command \
+        "${kea_admin}" db-init pgsql -u "${db_user}" -p "${db_password}" -n "${db_name}" -d "${db_scripts_dir}"
+    assert_eq 0 "${EXIT_CODE}" "cannot initialize the database, expected exit code: %d, actual: %d"
+
+    sql="select sflqCreateFlqPool6('3001::'::inet, '3001::02'::inet, 2::smallint,\
+                                 128::smallint, 1::bigint, false)"
+    run_statement "sflqCreateFlqPool6" "$sql"
+
+    sql="select sflqPickFreeLease6('3001::'::inet, '3001::02'::inet)"
+    run_statement "sflqPickFreeLease6.1" "$sql"  "3001::";
+    run_statement "sflqPickFreeLease6.2" "$sql"  "3001::1";
+    run_statement "sflqPickFreeLease6.3" "$sql"  "3001::2";
+
+    # Inserting a lease directly. Pick should still see it.
+    sql="insert into lease6 (address, lease_type, subnet_id) values ('3001::1'::inet, 2::smallint, 1::bigint)";
+    run_statement "insert 3001::1" "$sql"  "";
+
+    sql="select sflqPickFreeLease6('3001::'::inet, '3001::02'::inet)"
+    run_statement "sflqPickFreeLease6.4" "$sql"  "3001::";
+    run_statement "sflqPickFreeLease6.5" "$sql"  "3001::1";
+    run_statement "sflqPickFreeLease6.6" "$sql"  "3001::2";
+
+    # Updating to reclaimed directly. Pick should still see it.
+    sql="update lease6 set state = 2 where address = ('3001::1'::inet);"
+    run_statement "update 3001::1" "$sql"  "";
+
+    sql="select sflqPickFreeLease6('3001::'::inet, '3001::02'::inet)"
+    run_statement "sflqPickFreeLease6.7" "$sql"  "3001::";
+    run_statement "sflqPickFreeLease6.8" "$sql"  "3001::1";
+    run_statement "sflqPickFreeLease6.9" "$sql"  "3001::2";
+
+    # Deleting a lease directly. Pick should still see it.
+    sql="delete from lease6"
+    run_statement "delete 3001::1" "$sql"  "";
+
+    sql="select sflqPickFreeLease6('3001::'::inet, '3001::02'::inet)"
+    run_statement "sflqPickFreeLease6.10" "$sql"  "3001::";
+    run_statement "sflqPickFreeLease6.11" "$sql"  "3001::1";
+    run_statement "sflqPickFreeLease6.12" "$sql"  "3001::2";
+
+    # Check pools with one address.
+    address="'2001:db8::8bd:1002'::inet"
+    sql="select sflqCreateFlqPool6(${address}, ${address}, 2::smallint, \
+                                 128::smallint, 1::bigint, false)"
+    run_statement "sflqCreateFlqPool6.2" "${sql}"
+
+    sql="select sflqPickFreeLease6(${address}, ${address})"
+    run_statement "sflqPickFreeLease6.13" "${sql}" "2001:db8::8bd:1002";
+    # Rolling over results in the same address when there is only one.
+    run_statement "sflqPickFreeLease6.14" "${sql}" "2001:db8::8bd:1002";
+
+    # Check picking last address.
+    address="'ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff'::inet"
+    sql="select sflqCreateFlqPool6(${address}, ${address}, 2::smallint, \
+                                 128::smallint, 1::bigint, false)"
+    run_statement "sflqCreateFlqPool6.3" "${sql}"
+
+    sql="select sflqPickFreeLease6(${address}, ${address})"
+    run_statement "sflqPickFreeLease6.17" "${sql}" "ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff";
+    run_statement "sflqPickFreeLease6.18" "${sql}" "ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff";
+
+    # Let's wipe the whole database
+    pgsql_wipe
+
+    test_finish 0
+}
+
+# Verifies sflqInsertLease4 function
+pgsql_sflqInsertLease4() {
+    test_start "pgsql.pgsql_sflqInsertLease4"
+
+    # Let's wipe the whole database
+    pgsql_wipe
+
+    # Create the database
+    run_command \
+        "${kea_admin}" db-init pgsql -u "${db_user}" -p "${db_password}" -n "${db_name}" -d "${db_scripts_dir}"
+    assert_eq 0 "${EXIT_CODE}" "cannot initialize the database, expected exit code: %d, actual: %d"
+
+    # Create a SFLQ pool 127.0.0.0 - 127.0.0.4
+    start_address="('127.0.0.0'::inet - '0.0.0.0'::inet)"
+    end_address="('127.0.0.4'::inet - '0.0.0.0'::inet)"
+    sql="select sflqCreateFlqPool4($start_address, $end_address, 1::bigint, false)"
+    run_statement "sflqCreateFlqPool4" "$sql"
+
+    # Verify free_lease4 has all five addresses
+    sql="select count(address) from free_lease4 \
+            where address >= $start_address \
+            and address <= $end_address"
+    run_statement "check sflqCreateFlqPool4" "$sql" "5"
+
+    # Insert an assigned lease for 127.0.0.1
+    lease_address="127.0.0.1"
+    bigint_address="('$lease_address'::inet - '0.0.0.0'::inet)"
+    sql="select sflqInsertLease4($bigint_address,\
+                               NULL, NULL, NULL, NULL,\
+                               1::bigint, 'f'::boolean, 'f'::boolean,\
+                               NULL, 0::bigint, NULL, NULL, NULL, 0::bigint)"
+    run_statement "sflqInsertLease4 $lease_address" "$sql" "1"
+
+    # Verify lease is inserted into lease4 and removed from free_lease4
+    sql="select count(address) from lease4 where address = $bigint_address;"
+    run_statement "check lease4 1" "$sql" "1"
+    sql="select count(address) from free_lease4 where address = $bigint_address;"
+    run_statement "check free_lease4 1" "$sql" "0"
+
+    # Insert a declined lease for 127.0.0.2
+    lease_address="127.0.0.2"
+    bigint_address="('$lease_address'::inet - '0.0.0.0'::inet)"
+    sql="select sflqInsertLease4($bigint_address,\
+                               NULL, NULL, NULL, NULL,\
+                               1::bigint, 'f'::boolean, 'f'::boolean,\
+                               NULL, 1::bigint, NULL, NULL, NULL, 0::bigint)"
+    run_statement "sflqInsertLease4 $lease_address" "$sql" "1"
+
+    # Verify lease is inserted into lease4 and removed from free_lease4
+    sql="select count(address) from lease4 where address = $bigint_address;"
+    run_statement "check lease4 2" "$sql" "1"
+    sql="select count(address) from free_lease4 where address = $bigint_address;"
+    run_statement "check free_lease4 2" "$sql" "0"
+
+    # Insert a reclaimed lease for 127.0.0.3
+    lease_address="127.0.0.3"
+    bigint_address="('$lease_address'::inet - '0.0.0.0'::inet)"
+    sql="select sflqInsertLease4($bigint_address,\
+                               NULL, NULL, NULL, NULL,\
+                               1::bigint, 'f'::boolean, 'f'::boolean,\
+                               NULL, 2::bigint, NULL, NULL, NULL, 0::bigint)"
+    run_statement "sflqInsertLease4 $lease_address" "$sql" "1"
+
+    # Verify lease is inserted into lease4 and but not removed from free_lease4
+    sql="select count(address) from lease4 where address = $bigint_address;"
+    run_statement "check lease4 3" "$sql" "1"
+    sql="select count(address) from free_lease4 where address = $bigint_address;"
+    run_statement "check free_lease4 3" "$sql"  "1"
+
+    # Insert an expired lease for 127.0.0.4
+    lease_address="127.0.0.4"
+    bigint_address="('$lease_address'::inet - '0.0.0.0'::inet)"
+    sql="select sflqInsertLease4($bigint_address, NULL, NULL,\
+                               3600::bigint, (current_timestamp -  make_interval(secs => 10)),\
+                               1::bigint, 'f'::boolean, 'f'::boolean,\
+                               NULL, 0::bigint, NULL, NULL, NULL, 0::bigint)"
+    run_statement "sflqInsertLease4 $lease_address" "$sql" "1"
+
+    # Verify lease is inserted into lease4 and removed from free_lease4
+    sql="select count(address) from lease4 where address = $bigint_address;"
+    run_statement "check lease4 4" "$sql" "1"
+    sql="select count(address) from free_lease4 where address = $bigint_address;"
+    run_statement "check free_lease4 4" "$sql"  "0"
+
+    # Let's wipe the whole database
+    #pgsql_wipe
+
+    test_finish 0
+}
+
+# Verifies sflqUpdateLease4 function
+pgsql_sflqUpdateLease4() {
+    test_start "pgsql.pgsql_sflqUpdateLease4"
+
+    # Let's wipe the whole database
+    pgsql_wipe
+
+    # Create the database
+    run_command \
+        "${kea_admin}" db-init pgsql -u "${db_user}" -p "${db_password}" -n "${db_name}" -d "${db_scripts_dir}"
+    assert_eq 0 "${EXIT_CODE}" "cannot initialize the database, expected exit code: %d, actual: %d"
+
+    # Create a SFLQ pool 127.0.0.0 - 127.0.0.4
+    start_address="('127.0.0.0'::inet - '0.0.0.0'::inet)"
+    end_address="('127.0.0.4'::inet - '0.0.0.0'::inet)"
+    sql="select sflqCreateFlqPool4($start_address, $end_address, 1::bigint, false)"
+    run_statement "sflqCreateFlqPool4" "$sql"
+
+    # Verify free_lease4 has all five addresses
+    sql="select count(address) from free_lease4 \
+            where address >= $start_address \
+            and address <= $end_address"
+    run_statement "check sflqCreateFlqPool4" "$sql" "5"
+
+    # Get a future timestamp
+    sql="select (current_timestamp + make_interval(secs => 3600))"
+    run_statement "get future time stamp" "$sql"
+    future="${OUTPUT}"
+
+    # Insert an assigned lease for 127.0.0.1
+    lease_address="127.0.0.1"
+    bigint_address="('$lease_address'::inet - '0.0.0.0'::inet)"
+    sql="select sflqInsertLease4($bigint_address, NULL, NULL, 3600::bigint, '$future'::timestamp,\
+                               1::bigint, 'f'::boolean, 'f'::boolean, NULL, \
+                               0::bigint, NULL, NULL, NULL, 0::bigint)";
+    run_statement "sflqInsertLease4 $lease_address" "$sql" "1"
+
+    # Verify lease is inserted into lease4 and removed from free_lease4
+    sql="select count(address) from lease4 where address = $bigint_address;"
+    run_statement "check lease4 1" "$sql" "1"
+    sql="select count(address) from free_lease4 where address = $bigint_address;"
+    run_statement "check free_lease4 1" "$sql" "0"
+
+    # Update the lease to declined
+    sql="select sflqUpdateLease4($bigint_address, NULL, NULL, 3600::bigint, '$future'::timestamp,\
+                               1::bigint, 'f'::boolean, 'f'::boolean, NULL,\
+                               1::bigint, NULL, NULL, NULL, 0::bigint,\
+                               $bigint_address, '$future'::timestamp)";
+    run_statement "sflqUpdateLease4 1" "$sql" "1"
+
+    # Verify lease is updated lease4 and but not present free_lease4
+    sql="select count(address) from lease4 where address = $bigint_address and state = 1;"
+    run_statement "check lease4 2" "$sql" "1"
+    sql="select count(address) from free_lease4 where address = $bigint_address;"
+    run_statement "check free_lease4 2" "$sql" "0"
+
+    # Update the lease to be reclaimed.
+    sql="select sflqUpdateLease4($bigint_address, NULL, NULL, 3600::bigint, '$future'::timestamp,\
+                               1::bigint, 'f'::boolean, 'f'::boolean, NULL,\
+                               2::bigint, NULL, NULL, NULL, 0::bigint,\
+                               $bigint_address, '$future'::timestamp)";
+    run_statement "sflqUpdateLease4 2" "$sql" "1"
+
+    # Verify lease is updated in lease4 and added to free_lease4
+    sql="select count(address) from lease4 where address = $bigint_address and state = 2;"
+    run_statement "check lease4 3" "$sql" "1"
+    sql="select count(address) from free_lease4 where address = $bigint_address;"
+    run_statement "check free_lease4 3" "$sql"  "1"
+
+    # Update requires expirations to match. In order to test expiration
+    # logic, need to get an expired time stamp and then update the lease
+    # directly setting expire.
+    sql="select (current_timestamp - make_interval(secs => 3600))"
+    run_statement "get expired time stamp" "$sql"
+    expired="${OUTPUT}"
+    sql="update lease4 set expire = '$expired'::timestamp\
+         where address = $bigint_address"
+    run_statement "update lease with expired time stamp" "$sql"
+
+    # Delete the lease from free_lease4;
+    sql="delete from free_lease4 where address = $bigint_address;"
+    run_statement "manually delete lease" "$sql"
+
+    # Update the expired lease.
+    sql="select sflqUpdateLease4($bigint_address, NULL, NULL, 3600::bigint, '$expired'::timestamp,\
+                               1::bigint, 'f'::boolean, 'f'::boolean, NULL,\
+                               0::bigint, NULL, NULL, NULL, 0::bigint,\
+                               $bigint_address, '$expired'::timestamp)";
+    run_statement "sflqUpdateLease4 3" "$sql" "1"
+
+    # Verify lease is updated in lease4 but not added to free_lease4
+    sql="select count(address) from lease4 where address = $bigint_address and state = 0;"
+    run_statement "check lease4 4" "$sql" "1"
+    sql="select count(address) from free_lease4 where address = $bigint_address;"
+    run_statement "check free_lease4 4" "$sql"  "0"
+
+    # Let's wipe the whole database
+#    pgsql_wipe
+
+    test_finish 0
+}
+
+pgsql_sflqDeleteLease4() {
+    test_start "pgsql.pgsql_sflqDeleteLease4"
+
+    # Let's wipe the whole database
+    pgsql_wipe
+
+    # Create the database
+    run_command \
+        "${kea_admin}" db-init pgsql -u "${db_user}" -p "${db_password}" -n "${db_name}" -d "${db_scripts_dir}"
+    assert_eq 0 "${EXIT_CODE}" "cannot initialize the database, expected exit code: %d, actual: %d"
+
+    # Create a SFLQ pool 127.0.0.0 - 127.0.0.4
+    start_address="('127.0.0.0'::inet - '0.0.0.0'::inet)"
+    end_address="('127.0.0.4'::inet - '0.0.0.0'::inet)"
+    sql="select sflqCreateFlqPool4($start_address, $end_address, 1::bigint, false)"
+    run_statement "sflqCreateFlqPool4" "$sql"
+
+    # Verify free_lease4 has all five addresses
+    sql="select count(address) from free_lease4 \
+            where address >= $start_address \
+            and address <= $end_address"
+    run_statement "check sflqCreateFlqPool4" "$sql" "5"
+
+    # Get a future timestamp
+    sql="select (current_timestamp + make_interval(secs => 3600))"
+    run_statement "get future time stamp" "$sql"
+    future="${OUTPUT}"
+
+
+    # Insert an assigned lease for 127.0.0.1
+    lease_address="127.0.0.1"
+    bigint_address="('$lease_address'::inet - '0.0.0.0'::inet)"
+    sql="select sflqInsertLease4($bigint_address, NULL, NULL, 3600::bigint, '$future'::timestamp,\
+                               1::bigint, 'f'::boolean, 'f'::boolean, NULL, \
+                               0::bigint, NULL, NULL, NULL, 0::bigint)";
+    run_statement "sflqInsertLease4 $lease_address" "$sql" "1"
+
+    # Verify lease is inserted into lease4 and removed from free_lease4
+    sql="select count(address) from lease4 where address = $bigint_address;"
+    run_statement "check lease4 1" "$sql" "1"
+    sql="select count(address) from free_lease4 where address = $bigint_address;"
+    run_statement "check free_lease4 1" "$sql" "0"
+
+    # Attempt to delete lease with mismatched expire.
+    sql="select sflqDeleteLease4($bigint_address, current_timestamp)"
+    run_statement "sflqDeleteLease4 $bigint_address" "$sql" "0"
+
+    # Verify lease is still in lease4 and not in free_lease4
+    sql="select count(address) from lease4 where address = $bigint_address;"
+    run_statement "check lease4 2" "$sql" "1"
+    sql="select count(address) from free_lease4 where address = $bigint_address;"
+    run_statement "check free_lease4 2" "$sql" "0"
+
+    # Delete lease with matching expire.
+    sql="select sflqDeleteLease4($bigint_address, '$future'::timestamp)"
+    run_statement "sflqDeleteLease4 $bigint_address" "$sql" "1"
+
+    # Verify lease is not in lease4 but is in free_lease4
+    sql="select count(address) from lease4 where address = $bigint_address;"
+    run_statement "check lease4 3" "$sql" "0"
+    sql="select count(address) from free_lease4 where address = $bigint_address;"
+    run_statement "check free_lease4 3" "$sql" "1"
+
+    # Let's wipe the whole database
+    pgsql_wipe
+
+    test_finish 0
+}
+
+pgsql_sflqInsertLease6() {
+    test_start "pgsql.pgsql_sflqInsertLease6"
+
+    # Let's wipe the whole database
+    pgsql_wipe
+
+    # Create the database
+    run_command \
+        "${kea_admin}" db-init pgsql -u "${db_user}" -p "${db_password}" -n "${db_name}" -d "${db_scripts_dir}"
+    assert_eq 0 "${EXIT_CODE}" "cannot initialize the database, expected exit code: %d, actual: %d"
+
+    # Create a SFLQ pool 3001:: - 3001::4
+    sql="select sflqCreateFlqPool6('3001::'::inet, '3001::4'::inet, 0::smallint, 128::smallint,\
+                                 1::bigint, false)"
+    run_statement "sflqCreateFlqPool6" "$sql"
+
+    # Verify free_lease6 has all five addresses
+    sql="select count(bin_address) from free_lease6 \
+            where bin_address >= inetToBytea('3001::'::inet) \
+            and bin_address <= inetToBytea('3001::4'::inet)"
+    run_statement "check sflqCreateFlqPool6" "$sql" "5"
+
+    # Get a future timestamp
+    sql="select (CURRENT_TIMESTAMP + make_interval(secs => 3600))"
+    run_statement "get expired time stamp" "$sql"
+    future="${OUTPUT}"
+
+    # Get an expired timestamp
+    sql="select (CURRENT_TIMESTAMP - make_interval(secs => 3600))"
+    run_statement "get expired time stamp" "$sql"
+    expired="${OUTPUT}"
+
+    # Insert an assigned lease for 3001::1
+    in_address="'3001::1'"
+    bin_address="inetToBytea('3001::1'::inet)"
+    duid="decode('01020304','hex')"
+    subnet_id="1"
+    ltype="0"
+    iaid="1234"
+    state="0"
+    sql="select sflqInsertLease6($in_address::inet, $duid, 3600::bigint, '$future'::timestamp,\
+                               $subnet_id::bigint, 3600::bigint, $ltype::smallint, \
+                               $iaid::integer, 128::smallint, 'f'::boolean, 'f'::boolean,\
+                               NULL, NULL, 0::smallint, 0::smallint, $state::bigint, \
+                               NULL, 0::bigint)"
+    run_statement "sflqInsertLease6 $in_address" "$sql" "1"
+
+    # Verify lease is inserted into lease6 and removed from free_lease6
+    sql="select count(address) from lease6 where address = $in_address::inet;"
+    run_statement "check lease6 1" "$sql" "1"
+    sql="select count(address) from free_lease6 where bin_address = $bin_address;"
+    run_statement "check free_lease6 1" "$sql" "0"
+
+    # Insert a declined lease for 3001::2
+    in_address="'3001::2'"
+    bin_address="inetToBytea('3001::2'::inet)"
+    state="1"
+    sql="select sflqInsertLease6($in_address::inet, $duid, 3600::bigint, '$future'::timestamp,\
+                               $subnet_id::bigint, 3600::bigint, $ltype::smallint, \
+                               $iaid::integer, 128::smallint, 'f'::boolean, 'f'::boolean,\
+                               NULL, NULL, 0::smallint, 0::smallint, $state::bigint, \
+                               NULL, 0::bigint)"
+    run_statement "sflqInsertLease6 $in_address" "$sql" "1"
+
+    # Verify lease is inserted into lease6 and removed from free_lease6
+    sql="select count(address) from lease6 where address = $in_address::inet;"
+    run_statement "check lease6 2" "$sql" "1"
+    sql="select count(address) from free_lease6 where bin_address = $bin_address;"
+    run_statement "check free_lease6 2" "$sql" "0"
+
+    # Insert a reclaimed lease for 3001::3
+    in_address="'3001::3'"
+    bin_address="inetToBytea('3001::3'::inet)"
+    state="2"
+    sql="select sflqInsertLease6($in_address::inet, $duid, 3600::bigint, '$future'::timestamp,\
+                               $subnet_id::bigint, 3600::bigint, $ltype::smallint, \
+                               $iaid::integer, 128::smallint, 'f'::boolean, 'f'::boolean,\
+                               NULL, NULL, 0::smallint, 0::smallint, $state::bigint, \
+                               NULL, 0::bigint)"
+    run_statement "sflqInsertLease6 $in_address" "$sql" "1"
+
+    # Verify lease is inserted into lease6 and but not removed from free_lease6
+    sql="select count(address) from lease6 where address = $in_address::inet;"
+    run_statement "check lease6 3" "$sql" "1"
+    sql="select count(address) from free_lease6 where bin_address = $bin_address;"
+    run_statement "check free_lease6 3" "$sql" "1"
+
+    # Insert an expired lease for 3001::4
+    in_address="'3001::4'"
+    bin_address="inetToBytea('3001::4'::inet)"
+    state="0"
+    sql="select sflqInsertLease6($in_address::inet, $duid, 3600::bigint, '$expired'::timestamp,\
+                               $subnet_id::bigint, 3600::bigint, $ltype::smallint, \
+                               $iaid::integer, 128::smallint, 'f'::boolean, 'f'::boolean,\
+                               NULL, NULL, 0::smallint, 0::smallint, $state::bigint, \
+                               NULL, 0::bigint)"
+    run_statement "sflqInsertLease6 $in_address" "$sql" "1"
+
+    # Verify lease is inserted into lease6 and removed from free_lease6
+    sql="select count(address) from lease6 where address = $in_address::inet;"
+    run_statement "check lease6 4" "$sql" "1"
+    sql="select count(address) from free_lease6 where bin_address = $bin_address;"
+    run_statement "check free_lease6 4" "$sql" "0"
+
+    # Let's wipe the whole database
+    pgsql_wipe
+
+    test_finish 0
+}
+
+pgsql_sflqUpdateLease6() {
+    test_start "pgsql.pgsql_sflqUpdateLease6"
+
+    # Let's wipe the whole database
+    pgsql_wipe
+
+    # Create the database
+    run_command \
+        "${kea_admin}" db-init pgsql -u "${db_user}" -p "${db_password}" -n "${db_name}" -d "${db_scripts_dir}"
+    assert_eq 0 "${EXIT_CODE}" "cannot initialize the database, expected exit code: %d, actual: %d"
+
+    # Create a SFLQ pool 3001:: - 3001::4
+    sql="select sflqCreateFlqPool6('3001::'::inet, '3001::4'::inet, 0::smallint, 128::smallint,\
+                                 1::bigint, false)"
+    run_statement "sflqCreateFlqPool6" "$sql"
+
+    # Verify free_lease6 has all five addresses
+    sql="select count(bin_address) from free_lease6 \
+            where bin_address >= inetToBytea('3001::'::inet) \
+            and bin_address <= inetToBytea('3001::4'::inet)"
+    run_statement "check sflqCreateFlqPool6" "$sql" "5"
+
+    # Get a future timestamp
+    sql="select (CURRENT_TIMESTAMP + make_interval(secs => 3600))"
+    run_statement "get expired time stamp" "$sql"
+    future="${OUTPUT}"
+
+    # Get an expired timestamp
+    sql="select (CURRENT_TIMESTAMP - make_interval(secs => 3600))"
+    run_statement "get expired time stamp" "$sql"
+    expired="${OUTPUT}"
+
+    # Insert an assigned lease for 3001::1
+    in_address="'3001::1'"
+    bin_address="inetToBytea('3001::1'::inet)"
+    duid="decode('01020304','hex')"
+    subnet_id="1"
+    ltype="0"
+    iaid="1234"
+    state="0"
+    sql="select sflqInsertLease6($in_address::inet, $duid, 3600::bigint, '$future'::timestamp,\
+                               $subnet_id::bigint, 3600::bigint, $ltype::smallint, \
+                               $iaid::integer, 128::smallint, 'f'::boolean, 'f'::boolean,\
+                               NULL, NULL, 0::smallint, 0::smallint, $state::bigint, \
+                               NULL, 0::bigint)"
+    run_statement "sflqInsertLease6 $in_address" "$sql" "1"
+
+    # Verify lease is inserted into lease6 and removed from free_lease6
+    sql="select count(address) from lease6 where address = $in_address::inet;"
+    run_statement "check lease6 1" "$sql" "1"
+    sql="select count(address) from free_lease6 where bin_address = $bin_address;"
+    run_statement "check free_lease6 1" "$sql" "0"
+
+    # Update the lease to declined
+    state="1"
+    sql="select sflqUpdateLease6($in_address::inet, $duid, 3600::bigint, '$future'::timestamp,\
+                               $subnet_id::bigint, 3600::bigint, $ltype::smallint, \
+                               $iaid::integer, 128::smallint, 'f'::boolean, 'f'::boolean,\
+                               NULL, NULL, 0::smallint, 0::smallint, $state::bigint, \
+                               NULL, 0::bigint, $in_address::inet, '$future'::timestamp)"
+    run_statement "sflqUpdateLease6 $in_address" "$sql" "1"
+
+    # Verify lease is updated in lease6 and but not present in free_lease6
+    sql="select count(address) from lease6 where address = $in_address::inet and state = 1;"
+    run_statement "check lease6 2" "$sql" "1"
+    sql="select count(address) from free_lease6 where bin_address = $bin_address;"
+    run_statement "check free_lease6 2" "$sql" "0"
+
+    # Update the lease to be reclaimed.
+    state="2"
+    sql="select sflqUpdateLease6($in_address::inet, $duid, 3600::bigint, '$future'::timestamp,\
+                               $subnet_id::bigint, 3600::bigint, $ltype::smallint, \
+                               $iaid::integer, 128::smallint, 'f'::boolean, 'f'::boolean,\
+                               NULL, NULL, 0::smallint, 0::smallint, $state::bigint, \
+                               NULL, 0::bigint, $in_address::inet, '$future'::timestamp)"
+    run_statement "sflqUpdateLease6 $in_address" "$sql" "1"
+
+    # Verify lease is updated in lease6 and added to free_lease6
+    sql="select count(address) from lease6 where address = $in_address::inet and state = 2;"
+    run_statement "check lease6 3" "$sql" "1"
+    sql="select count(address) from free_lease6 where bin_address = $bin_address;"
+    run_statement "check free_le3se6 3" "$sql" "1"
+
+    # Update requires expirations to match. In order to test expiration
+    # logic, need to update the lease directly setting expire.
+    sql="update lease6 set expire = '$expired'::timestamp\
+         where address = $in_address"
+    run_statement "update lease with expired time stamp" "$sql"
+
+    # Manually delete the lease from free_lease6;
+    sql="delete from free_lease6 where bin_address = $bin_address;"
+    run_statement "manually delete lease" "$sql"
+
+    # Update the expired lease.
+    state=0
+    sql="select sflqUpdateLease6($in_address::inet, $duid, 3600::bigint, '$expired'::timestamp,\
+                               $subnet_id::bigint, 3600::bigint, $ltype::smallint, \
+                               $iaid::integer, 128::smallint, 'f'::boolean, 'f'::boolean,\
+                               NULL, NULL, 0::smallint, 0::smallint, $state::bigint, \
+                               NULL, 0::bigint, $in_address::inet, '$expired'::timestamp)"
+    run_statement "sflqUpdateLease6 $in_address" "$sql" "1"
+
+    # Verify lease is updated in lease6 but not added to free_lease6
+    sql="select count(address) from lease6 where address = $in_address::inet and state = 0;"
+    run_statement "check lease6 4" "$sql" "1"
+    sql="select count(address) from free_lease6 where bin_address = $bin_address;"
+    run_statement "check free_lease6 4" "$sql" "0"
+
+    # Let's wipe the whole database
+    pgsql_wipe
+
+    test_finish 0
+}
+
+pgsql_sflqDeleteLease6() {
+    test_start "pgsql.pgsql_sflqDeleteLease6"
+
+    # Let's wipe the whole database
+    pgsql_wipe
+
+    # Create the database
+    run_command \
+        "${kea_admin}" db-init pgsql -u "${db_user}" -p "${db_password}" -n "${db_name}" -d "${db_scripts_dir}"
+    assert_eq 0 "${EXIT_CODE}" "cannot initialize the database, expected exit code: %d, actual: %d"
+
+    # Create a SFLQ pool 3001:: - 3001::4
+    sql="select sflqCreateFlqPool6('3001::'::inet, '3001::4'::inet, 0::smallint, 128::smallint,\
+                                 1::bigint, false)"
+    run_statement "sflqCreateFlqPool6" "$sql"
+
+    # Verify free_lease6 has all five addresses
+    sql="select count(bin_address) from free_lease6 \
+            where bin_address >= inetToBytea('3001::'::inet) \
+            and bin_address <= inetToBytea('3001::4'::inet)"
+    run_statement "check sflqCreateFlqPool6" "$sql" "5"
+
+    # Get a future timestamp
+    sql="select (CURRENT_TIMESTAMP + make_interval(secs => 3600))"
+    run_statement "get expired time stamp" "$sql"
+    future="${OUTPUT}"
+
+    # Insert an assigned lease for 3001::1
+    in_address="'3001::1'"
+    bin_address="inetToBytea('3001::1'::inet)"
+    duid="decode('01020304','hex')"
+    subnet_id="1"
+    ltype="0"
+    iaid="1234"
+    state="0"
+    sql="select sflqInsertLease6($in_address::inet, $duid, 3600::bigint, '$future'::timestamp,\
+                               $subnet_id::bigint, 3600::bigint, $ltype::smallint, \
+                               $iaid::integer, 128::smallint, 'f'::boolean, 'f'::boolean,\
+                               NULL, NULL, 0::smallint, 0::smallint, $state::bigint, \
+                               NULL, 0::bigint)"
+    run_statement "sflqInsertLease6 $in_address" "$sql" "1"
+
+    # Verify lease is inserted into lease6 and removed from free_lease6
+    sql="select count(address) from lease6 where address = $in_address::inet;"
+    run_statement "check lease6 1" "$sql" "1"
+    sql="select count(address) from free_lease6 where bin_address = $bin_address;"
+    run_statement "check free_lease6 1" "$sql" "0"
+
+    # Attempt to delete lease with mismatched expire.
+    sql="select sflqDeleteLease6($in_address::inet, current_timestamp)"
+    run_statement "sflqDeleteLease6 1 $in_address" "$sql" "0"
+
+    # Verify lease is still in lease6 and not in free_lease6
+    sql="select count(address) from lease6 where address = $in_address::inet;"
+    run_statement "check lease6 2" "$sql" "1"
+    sql="select count(address) from free_lease6 where bin_address = $bin_address;"
+    run_statement "check free_lease6 2" "$sql" "0"
+
+    # Delete lease with matching expire.
+    sql="select sflqDeleteLease6($in_address::inet, '$future'::timestamp)"
+    run_statement "sflqDeleteLease6 2 $in_address" "$sql" "1"
+
+    # Verify lease is not in lease6 but is in free_lease6
+    sql="select count(address) from lease6 where address = $in_address::inet;"
+    run_statement "check lease6 3" "$sql" "0"
+    sql="select count(address) from free_lease6 where bin_address = $bin_address;"
+    run_statement "check free_lease6 3" "$sql" "1"
+
+    # Let's wipe the whole database
+    pgsql_wipe
+
+    test_finish 0
+}
+# Verifies inetToBytea function
+pgsql_inetToBytea() {
+    test_start "pgsql.pgsql_initToBytea"
+
+    # Let's wipe the whole database
+    pgsql_wipe
+
+    # Create the database
+    run_command \
+        "${kea_admin}" db-init pgsql -u "${db_user}" -p "${db_password}" -n "${db_name}" -d "${db_scripts_dir}"
+    assert_eq 0 "${EXIT_CODE}" "cannot initialize the database, expected exit code: %d, actual: %d"
+
+    sql="select byteaToInet(inetToBytea('::1'::inet))"
+    run_statement "case 1" "$sql" "::1"
+
+    sql="select byteaToInet(inetToBytea('::2222:1'::inet))"
+    run_statement "case 2" "$sql" "::34.34.0.1"
+
+    sql="select byteaToInet(inetToBytea('::'::inet))"
+    run_statement "case 3" "$sql" "::"
+
+    sql="select byteaToInet(inetToBytea('3001::'::inet))"
+    run_statement "case 4" "$sql" "3001::"
+
+    sql="select byteaToInet(inetToBytea('3001::ff'::inet))"
+    run_statement "case 5" "$sql" "3001::ff"
+
+    sql="select byteaToInet(inetToBytea('2:dead:beef::ff'::inet))"
+    run_statement "case 6" "$sql" "2:dead:beef::ff"
+
+    sql="select byteaToInet(inetToBytea('ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff'::inet))"
+    run_statement "case 7" "$sql" "ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff"
+
+    sql="select byteaToInet(inetToBytea('00FF:0000:0000:0000:0000:0000:2222:1'))"
+    run_statement "case 8" "$sql" "ff::2222:1"
+
+
+    pgsql_wipe
+
+    test_finish 0
+}
+
+# Verifies that TA lease types are migrated
+pgsql_migrate_IA_TA() {
+    test_start "pgsql.migrate_IA_TA"
+
+    # Let's wipe the whole database
+    pgsql_wipe
+
+    # We need to create an older database with lease data so we can
+    # verify the upgrade mechanisms which prepopulate the lease stat
+    # tables.
+    #
+    # Initialize database to schema 1.0.
+    pgsql_execute_script "@abs_top_srcdir@/src/bin/admin/tests/dhcpdb_create_1.0.pgsql"
+    assert_eq 0 "${EXIT_CODE}" "cannot initialize 1.0 database, expected exit code: %d, actual: %d"
+
+    # Now upgrade to schema 33.0
+    pgsql_upgrade_schema_to_version 33.0
+
+    # Now three leases
+    sql="\
+         insert into lease6 (address, lease_type, subnet_id) values ('3001::1', 0, 1);\
+         insert into lease6 (address, lease_type, subnet_id) values ('3001::2', 1, 1);\
+         insert into lease6 (address, lease_type, subnet_id) values ('3001::3', 2, 1)";
+    run_statement "Step 1" "$sql"
+
+    # Verify the inserted record counts.
+    qry="select count(*) from lease6 where lease_type = 0;"
+    run_statement "Step 2 - NA" "$qry" 1
+    qry="select count(*) from lease6 where lease_type = 1;"
+    run_statement "Step 2 - TA" "$qry" 1
+    qry="select count(*) from lease6 where lease_type = 2;"
+    run_statement "Step 2 - PD" "$qry" 1
+
+    # Upgrade to schema 34.0
+    pgsql_upgrade_schema_to_version 34.0
+
+    # Verify the post-upgrade record counts.
+    qry="select count(*) from lease6 where lease_type = 0;"
+    run_statement "Step 2 - NA" "$qry" 2
+    qry="select count(*) from lease6 where lease_type = 1;"
+    run_statement "Step 2 - TA" "$qry" 0
+    qry="select count(*) from lease6 where lease_type = 2;"
+    run_statement "Step 2 - PD" "$qry" 1
+
+
+    # Let's wipe the whole database
+    pgsql_wipe
+
+    test_finish 0
+}
+
+# Handy shortcut for running a single test.
+if [ $# -gt 0 ]; then
+    echo "RUNNING ${1} only"
+    ${1}
+    exit $?
+fi
+
+# Run tests.
+pgsql_db_init_test
+pgsql_db_version_test
+pgsql_upgrade_test
+pgsql_lease4_dump_test
+pgsql_lease4_dump_test -y
+pgsql_lease6_dump_test
+pgsql_lease6_dump_test -y
+pgsql_lease4_upload_test
+pgsql_lease4_upload_test -y
+pgsql_lease6_upload_test
+pgsql_lease6_upload_test -y
+pgsql_lease4_stat_test
+pgsql_lease6_stat_test
+pgsql_lease_stat_upgrade_test
+pgsql_lease_stat_recount_test
+pgsql_unused_subnet_id_test
+pgsql_update_empty_duid_test
+pgsql_update_v6_addresses_to_binary
+pgsql_ddns_conflict_resolution_mode_update_test
+pgsql_dhcp_ddns_global_parameters_test
+pgsql_reservation_mode_disabled_parameters_test
+pgsql_reservation_mode_off_parameters_test
+pgsql_reservation_mode_all_parameters_test
+pgsql_reservation_mode_global_parameters_test
+pgsql_reservation_mode_out_of_pool_parameters_test
+pgsql_migrate_opt_record_type
+pgsql_remove_control_socket_parameters_test
+pgsql_migrate_client_class_test
+pgsql_migrate_dhcpX_options_client_classes
+pgsql_sflqCreateFlqPool4
+pgsql_sflqCreateFlqPool4Invalid
+pgsql_sflqPickFreeLease4
+pgsql_inetToBytea
+pgsql_sflqCreateFlqPool6
+pgsql_sflqCreateFlqPool6Invalid
+pgsql_sflqPickFreeLease6
+pgsql_sflqInsertLease4
+pgsql_sflqUpdateLease4
+pgsql_sflqDeleteLease4
+pgsql_sflqInsertLease6
+pgsql_sflqUpdateLease6
+pgsql_sflqDeleteLease6
+pgsql_migrate_IA_TA

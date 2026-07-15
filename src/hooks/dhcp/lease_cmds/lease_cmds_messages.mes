@@ -1,0 +1,259 @@
+# Copyright (C) 2017-2026 Internet Systems Consortium, Inc. ("ISC")
+#
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+% LEASE_CMDS_ADD4 lease4-add command successful (address: %1)
+Logged at debug log level 20.
+The lease4-add command has been successful. Lease IPv4 address
+is logged.
+
+% LEASE_CMDS_ADD4_CONFLICT lease4-add command failed due to conflict (parameters: %1, reason: %2)
+The received lease4-add is well-formed and contains valid parameters but the
+lease could not be created because it is in conflict with the server state
+or configuration. The reason for a conflict is logged in the message.
+
+% LEASE_CMDS_ADD4_FAILED lease4-add command failed (parameters: %1, reason: %2)
+The lease4-add command has failed. Both the reason as well as the
+parameters passed are logged.
+
+% LEASE_CMDS_ADD6 lease6-add command successful (address: %1)
+Logged at debug log level 20.
+The lease6-add command has been successful. Lease IPv6 address
+is logged.
+
+% LEASE_CMDS_ADD6_CONFLICT lease6-add command failed due to conflict (parameters: %1, reason: %2)
+The received lease6-add is well-formed and contains valid parameters but the
+lease could not be created because it is in conflict with the server state
+or configuration. The reason for a conflict is logged in the message.
+
+% LEASE_CMDS_ADD6_FAILED lease6-add command failed (parameters: %1, reason: %2)
+The lease6-add command has failed. Both the reason as well as the
+parameters passed are logged.
+
+% LEASE_CMDS_BULK_APPLY6 lease6-bulk-apply command successful (applied addresses count: %1)
+Logged at debug log level 20.
+The lease6-bulk-apply command has been successful. The number of applied
+addresses is logged.
+
+% LEASE_CMDS_BULK_APPLY6_FAILED lease6-bulk-apply command failed (parameters: %1, reason: %2)
+The lease6-bulk-apply command has failed. Both the reason as well
+as the parameters passed are logged.
+
+% LEASE_CMDS_DEINIT_OK unloading Lease Commands hooks library successful
+This info message indicates that the Lease Commands hooks library has been
+removed successfully.
+
+% LEASE_CMDS_DEL4 lease4-del command successful (address: %1)
+Logged at debug log level 20.
+The attempt to delete an IPv4 lease (lease4-del command) has been successful.
+Lease IPv4 address is logged.
+
+% LEASE_CMDS_DEL4_FAILED lease4-del command failed (parameters: %1, reason: %2)
+The attempt to delete an IPv4 lease (lease4-del command) has failed. Both the
+reason as well as the parameters passed are logged.
+
+% LEASE_CMDS_DEL6 lease4-del command successful (address: %1)
+Logged at debug log level 20.
+The attempt to delete an IPv4 lease (lease4-del command) has been successful.
+Lease IPv6 address is logged.
+
+% LEASE_CMDS_DEL6_FAILED lease6-del command failed (parameters: %1, reason: %2)
+The attempt to delete an IPv6 lease (lease4-del command) has failed. Both the
+reason as well as the parameters passed are logged.
+
+% LEASE_CMDS_GET4_FAILED lease4-get command failed (parameters: %1, reason: %2)
+The lease4-get command has failed. Both the reason as well as the
+parameters passed are logged.
+
+% LEASE_CMDS_GET6_FAILED lease6-get command failed (parameters: %1, reason: %2)
+The lease4-get command has failed. Both the reason as well as the
+parameters passed are logged.
+
+% LEASE_CMDS_INIT_OK loading Lease Commands hooks library successful
+This info message indicates that the Lease Commands hooks library has been
+loaded successfully. Enjoy!
+
+% LEASE_CMDS_LEASE4_OFFER_FAILED processing error occurred evaluating binding variables: %1
+This error log is emitted when an error occurs in  the lease4_offer
+handler is invoked. The argument provides an explanation.
+
+% LEASE_CMDS_LEASES4_COMMITTED_FAILED processing error occurred evaluating binding variables: %1
+This error log is emitted when an error occurs in  the leases4_committed
+handler is invoked. The argument provides an explanation.
+
+% LEASE_CMDS_LEASES6_COMMITTED_CONFLICT could not updating lease: %1 for: %2
+This error log is emitted by the leases6_committed callback when attempting
+to update a lease with new binding-variable values but a conflicting change
+has occurred rendering the update invalid. The arguments provide the lease
+address and the query details.
+
+% LEASE_CMDS_LEASES6_COMMITTED_FAILED reason: %1
+This error log is emitted when one or more leases associated with a client
+query failed to be updated with binding-variable values. The argument
+provides details. Individual errors for each lease should precede this log.
+
+% LEASE_CMDS_LEASES6_COMMITTED_LEASE_ERROR evaluating binding-variables for lease: %1 for: %2, reason: %3
+This error log is emitted by the leases6_committed callback when an
+unexpected error occurs evaluating the binding-variables for a given
+lease. The arguments provide the lease address, the query details, and
+an error explanation.
+
+% LEASE_CMDS_LOAD_ERROR loading Lease Commands hooks library failed: %1
+This error message indicates an error loading the Lease Commands
+hooks library. The details of the error are provided as argument of
+the log message.
+
+% LEASE_CMDS_PATH_SECURITY_WARNING lease file path specified is NOT SECURE: %1
+This warning message is issued when security enforcement is disabled
+and the path portion of the `filename` parameter of the lease4-write
+or lease6-write command does not comply with the supported path. The
+server will still use the specified path but is warning that doing so
+may pose a security risk.
+
+% LEASE_CMDS_RESEND_DDNS4 lease4-resend-ddns command successful: %1
+A request to update DNS for the requested IPv4 lease has been
+successfully queued for transmission to kea-dhcp-ddns.
+
+% LEASE_CMDS_RESEND_DDNS4_FAILED lease4-resend-ddns command failed: %1
+A request to update DNS for the requested IPv4 lease has failed.  The
+reason for the failure is logged.
+
+% LEASE_CMDS_RESEND_DDNS6 lease6-resend-ddns command successful: %1
+A request to update DNS for the requested IPv6 lease has been
+successfully queued for transmission to kea-dhcp-ddns.
+
+% LEASE_CMDS_RESEND_DDNS6_FAILED lease6-resend-ddns command failed: %1
+A request to update DNS for the requested IPv6 lease has failed.  The
+reason for the failure is logged.
+
+% LEASE_CMDS_UPDATE4 lease4-update command successful (address: %1)
+Logged at debug log level 20.
+The lease4-update command has been successful. Lease IPv4 address
+is logged.
+
+% LEASE_CMDS_UPDATE4_CONFLICT lease4-update command failed due to conflict (parameters: %1, reason: %2)
+The received lease4-update is well-formed and contains valid parameters
+but the lease could not be created because it is in conflict with the
+server state or configuration. The reason for a conflict is logged in
+the message.
+
+% LEASE_CMDS_UPDATE4_FAILED lease4-update command failed (parameters: %1, reason: %2)
+The lease4-update command has failed. Both the reason as well as the
+parameters passed are logged.
+
+% LEASE_CMDS_UPDATE6 lease6-update command successful (address: %1)
+Logged at debug log level 20.
+The lease6-update command has been successful. Lease IPv6 address
+is logged.
+
+% LEASE_CMDS_UPDATE6_CONFLICT lease6-update command failed due to conflict (parameters: %1, reason: %2)
+The received lease6-update is well-formed and contains valid parameters
+but the lease could not be created because it is in conflict with the
+server state or configuration. The reason for a conflict is logged in
+the message.
+
+% LEASE_CMDS_UPDATE6_FAILED lease6-add command failed (parameters: %1, reason: %2)
+The lease6-update command has failed. Both the reason as well as the
+parameters passed are logged.
+
+% LEASE_CMDS_WIPE4 lease4-wipe command successful (parameters: %1)
+The lease4-wipe command has been successful. Parameters of the command
+are logged.
+
+% LEASE_CMDS_WIPE4_FAILED lease4-wipe command failed (parameters: %1, reason: %2)
+The lease4-wipe command has failed. Both the reason as well as the
+parameters passed are logged.
+
+% LEASE_CMDS_WIPE6 lease6-wipe command successful (parameters: %1)
+The lease6-wipe command has been successful. Parameters of the command
+are logged.
+
+% LEASE_CMDS_WIPE6_FAILED lease6-wipe command failed (parameters: %1, reason: %2)
+The lease6-wipe command has failed. Both the reason as well as the
+parameters passed are logged.
+
+% SFLQ_POOL4_DEL sflq-pool4-del command succeeded, (parameters: %1) pools deleted: %2
+Logged at debug log level 20.
+The sflq-pool4-del command was successful. It prints the command arguments
+along with the number of pools deleted.
+
+% SFLQ_POOL4_DEL_FAILED sflq-pool4-del command failed, (parameters: %1, reason: %2)
+The sflq-pool4-del command has failed. Both the reason as well as the
+parameters passed are logged.
+
+% SFLQ_POOL4_GET_ALL sflq-pool4-get-all command succeeded, pools found: %1
+Logged at debug log level 20.
+The sflq-pool4-get-all command was successful.
+
+% SFLQ_POOL4_GET_ALL_FAILED sflq-pool4-get-all command failed, (parameters: %1, reason: %2)
+The sflq-pool4-get-all command has failed. Both the reason as well as the
+parameters passed are logged.
+
+% SFLQ_POOL4_GET_BY_RANGE sflq-pool4-get-by-range command succeeded, (parameters: %1) pools found: %2
+Logged at debug log level 20.
+The sflq-pool4-get-by-range command was successful.
+
+% SFLQ_POOL4_GET_BY_RANGE_FAILED sflq-pool4-get-by-range command failed, (parameters: %1, reason: %2)
+The sflq-pool4-get-range command has failed. Both the reason as well as the
+parameters passed are logged.
+
+% SFLQ_POOL4_GET_BY_SUBNET sflq-pool4-get-by-subnet command succeeded, (parameters: %1) pools found: %2
+Logged at debug log level 20.
+The sflq-pool4-get-by-subnet command was successful.
+
+% SFLQ_POOL4_GET_BY_SUBNET_FAILED sflq-pool4-get-by-subnet command failed, (parameters: %1, reason: %2)
+The sflq-pool4-get-subnet command has failed. Both the reason as well as the
+parameters passed are logged.
+
+% SFLQ_POOL4_REBUILD sflq-pool4-rebuild command succeeded, (parameters: %1) pools rebuilt: %2
+Logged at debug log level 20.
+The sflq-pool4-rebuild command was successful. It prints the command arguments
+along with the number of pools rebuilt.
+
+% SFLQ_POOL4_REBUILD_FAILED sflq-pool4-rebuild command failed, (parameters: %1, reason: %2)
+The sflq-pool4-rebuild command has failed. Both the reason as well as the
+parameters passed are logged.
+
+% SFLQ_POOL6_DEL sflq-pool4-del command succeeded, (parameters: %1) pools deleted: %2
+Logged at debug log level 20.
+The sflq-pool6-del command was successful. It prints the command arguments
+along with the number of pools deleted.
+
+% SFLQ_POOL6_DEL_FAILED sflq-pool4-del command failed, (parameters: %1, reason: %2)
+The sflq-pool6-del command has failed. Both the reason as well as the
+parameters passed are logged.
+
+% SFLQ_POOL6_GET_ALL sflq-pool6-get-all command succeeded, pools found: %1
+Logged at debug log level 20.
+The sflq-pool6-rebuild command was successful.
+
+% SFLQ_POOL6_GET_ALL_FAILED sflq-pool6-get-all command failed, (parameters: %1, reason: %2)
+The sflq-pool6-get-all command has failed. Both the reason as well as the
+parameters passed are logged.
+
+% SFLQ_POOL6_GET_BY_RANGE sflq-pool6-get-by-range command succeeded, (parameters: %1) pools found: %2
+Logged at debug log level 20.
+The sflq-pool6-get-by-range command was successful.
+
+% SFLQ_POOL6_GET_BY_RANGE_FAILED sflq-pool6-get-by-range command failed, (parameters: %1, reason: %2)
+The sflq-pool6-get-range command has failed. Both the reason as well as the
+parameters passed are logged.
+
+% SFLQ_POOL6_GET_BY_SUBNET sflq-pool6-get-by-subnet command succeeded, (parameters: %1) pools found: %2
+Logged at debug log level 20.
+The sflq-pool6-get-by-subnet command was successful.
+
+% SFLQ_POOL6_GET_BY_SUBNET_FAILED sflq-pool6-get-by-subnet command failed, (parameters: %1, reason: %2)
+The sflq-pool6-get-subnet command has failed. Both the reason as well as the
+parameters passed are logged.
+
+% SFLQ_POOL6_REBUILD sflq-pool6-rebuild command succeeded, (parameters: %1) pools rebuilt: %2
+Logged at debug log level 20.
+The sflq-pool6-rebuild command was successful. It prints the command arguments
+along with the number of pools rebuilt.
+
+% SFLQ_POOL6_REBUILD_FAILED sflq-pool6-rebuild command failed, (parameters: %1, reason: %2)
+The sflq-pool6-rebuild command has failed. Both the reason as well as the
+parameters passed are logged.

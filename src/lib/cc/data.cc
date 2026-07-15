@@ -1,0 +1,1864 @@
+// Copyright (C) 2010-2026 Internet Systems Consortium, Inc. ("ISC")
+//
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+#include <config.h>
+
+#include <cc/data.h>
+#include <util/bigints.h>
+
+#include <cstring>
+#include <cassert>
+#include <climits>
+#include <list>
+#include <map>
+#include <cstdio>
+#include <iostream>
+#include <iomanip>
+#include <set>
+#include <string>
+#include <sstream>
+#include <fstream>
+#include <cerrno>
+
+#include <boost/lexical_cast.hpp>
+
+#include <cmath>
+
+using namespace std;
+
+using isc::util::int128_t;
+
+namespace {
+const char* const WHITESPACE = " \b\f\n\r\t";
+} // end anonymous namespace
+
+namespace isc {
+namespace data {
+
+constexpr unsigned Element::MAX_NESTING_LEVEL;
+
+std::string
+Element::Position::str() const {
+    std::ostringstream ss;
+    ss << file_ << ":" << line_ << ":" << pos_;
+    return (ss.str());
+}
+
+std::ostream&
+operator<<(std::ostream& out, const Element::Position& pos) {
+    out << pos.str();
+    return (out);
+}
+
+void
+Element::removeEmptyContainersRecursively(unsigned level) {
+    if (level <= 0) {
+        // Cycles are by definition not empty so no need to throw.
+        return;
+    }
+    if (type_ == list || type_ == map) {
+        size_t s(size());
+        for (size_t i = 0; i < s; ++i) {
+            // Get child.
+            ElementPtr child;
+            if (type_ == list) {
+                child = getNonConst(i);
+            } else if (type_ == map) {
+                std::string const key(get(i)->stringValue());
+                // The ElementPtr - ConstElementPtr disparity between
+                // ListElement and MapElement is forcing a const cast here.
+                // It's undefined behavior to modify it after const casting.
+                // The options are limited. I've tried templating, moving
+                // this function from a member function to free-standing and
+                // taking the Element template as argument. I've tried
+                // making it a virtual function with overridden
+                // implementations in ListElement and MapElement. Nothing
+                // works.
+                child = boost::const_pointer_cast<Element>(get(key));
+            }
+
+            // Makes no sense to continue for non-container children.
+            if (child->getType() != list && child->getType() != map) {
+                continue;
+            }
+
+            // Recurse if not empty.
+            if (!child->empty()){
+                child->removeEmptyContainersRecursively(level - 1);
+            }
+
+            // When returning from recursion, remove if empty.
+            if (child->empty()) {
+                remove(i);
+                --i;
+                --s;
+            }
+        }
+    }
+}
+
+std::string
+Element::str() const {
+    std::stringstream ss;
+    toJSON(ss);
+    return (ss.str());
+}
+
+std::string
+Element::toWire() const {
+    std::stringstream ss;
+    toJSON(ss);
+    return (ss.str());
+}
+
+void
+Element::toWire(std::ostream& ss) const {
+    toJSON(ss);
+}
+
+bool
+Element::getValue(int64_t&) const {
+    return (false);
+}
+
+bool
+Element::getValue(double&) const {
+    return (false);
+}
+
+bool
+Element::getValue(bool&) const {
+    return (false);
+}
+
+bool
+Element::getValue(std::string&) const {
+    return (false);
+}
+
+bool
+Element::getValue(std::vector<ElementPtr>&) const {
+    return (false);
+}
+
+bool
+Element::getValue(std::map<std::string, ConstElementPtr>&) const {
+    return (false);
+}
+
+bool
+Element::setValue(const long long int) {
+    return (false);
+}
+
+bool
+Element::setValue(isc::util::int128_t const&) {
+    return (false);
+}
+
+bool
+Element::setValue(const double) {
+    return (false);
+}
+
+bool
+Element::setValue(const bool) {
+    return (false);
+}
+
+bool
+Element::setValue(const std::string&) {
+    return (false);
+}
+
+bool
+Element::setValue(const std::vector<ElementPtr>&) {
+    return (false);
+}
+
+bool
+Element::setValue(const std::map<std::string, ConstElementPtr>&) {
+    return (false);
+}
+
+ConstElementPtr
+Element::get(const int) const {
+    throwTypeError("get(int) called on a non-container Element");
+}
+
+ElementPtr
+Element::getNonConst(const int) const {
+    throwTypeError("get(int) called on a non-container Element");
+}
+
+void
+Element::set(const size_t, ElementPtr) {
+    throwTypeError("set(int, element) called on a non-list Element");
+}
+
+void
+Element::add(ElementPtr) {
+    throwTypeError("add() called on a non-list Element");
+}
+
+void
+Element::remove(const int) {
+    throwTypeError("remove(int) called on a non-container Element");
+}
+
+size_t
+Element::size() const {
+    throwTypeError("size() called on a non-list Element");
+}
+
+bool
+Element::empty() const {
+    throwTypeError("empty() called on a non-container Element");
+}
+
+ConstElementPtr
+Element::get(const std::string&) const {
+    throwTypeError("get(string) called on a non-map Element");
+}
+
+void
+Element::set(const std::string&, ConstElementPtr) {
+    throwTypeError("set(name, element) called on a non-map Element");
+}
+
+void
+Element::remove(const std::string&) {
+    throwTypeError("remove(string) called on a non-map Element");
+}
+
+bool
+Element::contains(const std::string&) const {
+    throwTypeError("contains(string) called on a non-map Element");
+}
+
+ConstElementPtr
+Element::find(const std::string&) const {
+    throwTypeError("find(string) called on a non-map Element");
+}
+
+bool
+Element::find(const std::string&, ConstElementPtr&) const {
+    return (false);
+}
+
+namespace {
+inline void
+throwJSONError(const std::string& error, const std::string& file, int line,
+               int pos) {
+    std::stringstream ss;
+    ss << error << " in " + file + ":" << line << ":" << pos;
+    isc_throw(JSONError, ss.str());
+}
+} // end anonymous namespace
+
+std::ostream&
+operator<<(std::ostream& out, const Element& e) {
+    return (out << e.str());
+}
+
+bool
+operator==(const Element& a, const Element& b) {
+    return (a.equals(b));
+}
+
+bool operator!=(const Element& a, const Element& b) {
+    return (!a.equals(b));
+}
+
+bool
+operator<(Element const& a, Element const& b) {
+    if (a.getType() != b.getType()) {
+        isc_throw(BadValue, "cannot compare Elements of different types");
+    }
+    switch (a.getType()) {
+    case Element::integer:
+        return a.intValue() < b.intValue();
+    case Element::real:
+        return a.doubleValue() < b.doubleValue();
+    case Element::boolean:
+        return b.boolValue() || !a.boolValue();
+    case Element::string:
+        return std::strcmp(a.stringValue().c_str(), b.stringValue().c_str()) < 0;
+    default:
+        isc_throw(BadValue, "cannot compare Elements of type " << to_string(a.getType()));
+    }
+}
+
+//
+// factory functions
+//
+ElementPtr
+Element::create(const Position& pos) {
+    return (ElementPtr(new NullElement(pos)));
+}
+
+ElementPtr
+Element::create(const long long int i, const Position& pos) {
+    return (ElementPtr(new IntElement(static_cast<int64_t>(i), pos)));
+}
+
+ElementPtr
+Element::create(const isc::util::int128_t& i, const Position& pos) {
+    return (ElementPtr(new BigIntElement(i, pos)));
+}
+
+ElementPtr
+Element::create(const int i, const Position& pos) {
+    return (create(static_cast<long long int>(i), pos));
+}
+
+ElementPtr
+Element::create(const long int i, const Position& pos) {
+    return (create(static_cast<long long int>(i), pos));
+}
+
+ElementPtr
+Element::create(const uint32_t i, const Position& pos) {
+    return (create(static_cast<long long int>(i), pos));
+}
+
+ElementPtr
+Element::create(const double d, const Position& pos) {
+    return (ElementPtr(new DoubleElement(d, pos)));
+}
+
+ElementPtr
+Element::create(const bool b, const Position& pos) {
+    return (ElementPtr(new BoolElement(b, pos)));
+}
+
+ElementPtr
+Element::create(const std::string& s, const Position& pos) {
+    return (ElementPtr(new StringElement(s, pos)));
+}
+
+ElementPtr
+Element::create(const char *s, const Position& pos) {
+    return (create(std::string(s), pos));
+}
+
+ElementPtr
+Element::createList(const Position& pos) {
+    return (ElementPtr(new ListElement(pos)));
+}
+
+ElementPtr
+Element::createMap(const Position& pos) {
+    return (ElementPtr(new MapElement(pos)));
+}
+
+
+//
+// helper functions for fromJSON factory
+//
+namespace {
+bool
+charIn(const int c, const char* chars) {
+    const size_t chars_len = std::strlen(chars);
+    for (size_t i = 0; i < chars_len; ++i) {
+        if (chars[i] == c) {
+            return (true);
+        }
+    }
+    return (false);
+}
+
+void
+skipChars(std::istream& in, const char* chars, int& line, int& pos) {
+    int c = in.peek();
+    while (charIn(c, chars) && c != EOF) {
+        if (c == '\n') {
+            ++line;
+            pos = 1;
+        } else {
+            ++pos;
+        }
+        in.ignore();
+        c = in.peek();
+    }
+}
+
+// skip on the input stream to one of the characters in chars
+// if another character is found this function throws JSONError
+// unless that character is specified in the optional may_skip
+//
+// It returns the found character (as an int value).
+int
+skipTo(std::istream& in, const std::string& file, int& line, int& pos,
+       const char* chars, const char* may_skip="") {
+    int c = in.get();
+    ++pos;
+    while (c != EOF) {
+        if (c == '\n') {
+            pos = 1;
+            ++line;
+        }
+        if (charIn(c, may_skip)) {
+            c = in.get();
+            ++pos;
+        } else if (charIn(c, chars)) {
+            while (charIn(in.peek(), may_skip)) {
+                if (in.peek() == '\n') {
+                    pos = 1;
+                    ++line;
+                } else {
+                    ++pos;
+                }
+                in.ignore();
+            }
+            return (c);
+        } else {
+            throwJSONError(std::string("'") + std::string(1, c) + "' read, one of \"" + chars + "\" expected", file, line, pos);
+        }
+    }
+    throwJSONError(std::string("EOF read, one of \"") + chars + "\" expected", file, line, pos);
+    return (c); // shouldn't reach here, but some compilers require it
+}
+
+// TODO: Should we check for all other official escapes here (and
+// error on the rest)?
+std::string
+strFromStringstream(std::istream& in, const std::string& file,
+                    const int line, int& pos) {
+    std::stringstream ss;
+    int c = in.get();
+    ++pos;
+    if (c == '"') {
+        c = in.get();
+        ++pos;
+    } else {
+        throwJSONError("String expected", file, line, pos);
+    }
+
+    while (c != EOF && c != '"') {
+        if (c == '\\') {
+            // see the spec for allowed escape characters
+            int d;
+            switch (in.peek()) {
+            case '"':
+                c = '"';
+                break;
+            case '/':
+                c = '/';
+                break;
+            case '\\':
+                c = '\\';
+                break;
+            case 'b':
+                c = '\b';
+                break;
+            case 'f':
+                c = '\f';
+                break;
+            case 'n':
+                c = '\n';
+                break;
+            case 'r':
+                c = '\r';
+                break;
+            case 't':
+                c = '\t';
+                break;
+            case 'u':
+                // skip first 0
+                in.ignore();
+                ++pos;
+                c = in.peek();
+                if (c != '0') {
+                    throwJSONError("Unsupported unicode escape", file, line, pos);
+                }
+                // skip second 0
+                in.ignore();
+                ++pos;
+                c = in.peek();
+                if (c != '0') {
+                    throwJSONError("Unsupported unicode escape", file, line, pos - 2);
+                }
+                // get first digit
+                in.ignore();
+                ++pos;
+                d = in.peek();
+                if ((d >= '0') && (d <= '9')) {
+                    c = (d - '0') << 4;
+                } else if ((d >= 'A') && (d <= 'F')) {
+                    c = (d - 'A' + 10) << 4;
+                } else if ((d >= 'a') && (d <= 'f')) {
+                    c = (d - 'a' + 10) << 4;
+                } else {
+                    throwJSONError("Not hexadecimal in unicode escape", file, line, pos - 3);
+                }
+                // get second digit
+                in.ignore();
+                ++pos;
+                d = in.peek();
+                if ((d >= '0') && (d <= '9')) {
+                    c |= d - '0';
+                } else if ((d >= 'A') && (d <= 'F')) {
+                    c |= d - 'A' + 10;
+                } else if ((d >= 'a') && (d <= 'f')) {
+                    c |= d - 'a' + 10;
+                } else {
+                    throwJSONError("Not hexadecimal in unicode escape", file, line, pos - 4);
+                }
+                break;
+            default:
+                throwJSONError("Bad escape", file, line, pos);
+            }
+            // drop the escaped char
+            in.ignore();
+            ++pos;
+        }
+        ss.put(c);
+        c = in.get();
+        ++pos;
+    }
+    if (c == EOF) {
+        throwJSONError("Unterminated string", file, line, pos);
+    }
+    return (ss.str());
+}
+
+std::string
+wordFromStringstream(std::istream& in, int& pos) {
+    std::stringstream ss;
+    while (isalpha(in.peek())) {
+        ss << (char) in.get();
+    }
+    pos += ss.str().size();
+    return (ss.str());
+}
+
+std::string
+numberFromStringstream(std::istream& in, int& pos) {
+    std::stringstream ss;
+    while (isdigit(in.peek()) || in.peek() == '+' || in.peek() == '-' ||
+           in.peek() == '.' || in.peek() == 'e' || in.peek() == 'E') {
+        ss << (char) in.get();
+    }
+    pos += ss.str().size();
+    return (ss.str());
+}
+
+// Should we change from IntElement and DoubleElement to NumberElement
+// that can also hold an e value? (and have specific getters if the
+// value is larger than an int can handle)
+//
+// At the moment of writing, the only way that the code flow can reach the
+// int128_t cast, and not throw, is by retrieving one of the few bigint
+// statistics using this method so the cast to int128_t can be removed
+// as there is no deserialization of bigints required, although the only
+// benefit would be better performance for error cases, so it's arguable.
+ElementPtr
+fromStringstreamNumber(std::istream& in, const std::string& file,
+                       const int line, int& pos) {
+    // Remember position where the value starts. It will be set in the
+    // Position structure of the Element to be created.
+    const uint32_t start_pos = pos;
+    // This will move the pos to the end of the value.
+    const std::string number = numberFromStringstream(in, pos);
+
+    // Catch leading zeros: raise an error as logging is not available.
+    if (((number.size() > 1) && (number[0] == '0') && isdigit(number[1])) ||
+        ((number.size() > 2) && (number[0] == '-') &&
+         (number[1] == '0') && isdigit(number[2]))) {
+        throwJSONError("Illegal leading zeros in '" + number + "'",
+                       file, line, start_pos);
+    }
+    // Is it a double?
+    if (number.find_first_of(".eE") < number.size()) {
+        try {
+            return (Element::create(boost::lexical_cast<double>(number),
+                                    Element::Position(file, line, start_pos)));
+        } catch (const boost::bad_lexical_cast& exception) {
+            throwJSONError("Number overflow while trying to cast '" + number +
+                           "' to double: " + exception.what(),
+                           file, line, start_pos);
+        }
+    }
+
+    // Is it an integer?
+    try {
+        return (Element::create(boost::lexical_cast<int64_t>(number),
+                                Element::Position(file, line, start_pos)));
+    } catch (const boost::bad_lexical_cast& exception64) {
+        // Is it a big integer?
+        try {
+            return (Element::create(int128_t(number),
+                                    Element::Position(file, line, start_pos)));
+        } catch (overflow_error const& exception128) {
+            throwJSONError("Number overflow while trying to cast '" + number +
+                           "' to int64 and subsequently to int128: " +
+                           exception64.what() + ", " + exception128.what(),
+                           file, line, start_pos);
+        }
+    }
+    return (ElementPtr());
+}
+
+ElementPtr
+fromStringstreamBool(std::istream& in, const std::string& file,
+                     const int line, int& pos) {
+    // Remember position where the value starts. It will be set in the
+    // Position structure of the Element to be created.
+    const uint32_t start_pos = pos;
+    // This will move the pos to the end of the value.
+    const std::string word = wordFromStringstream(in, pos);
+
+    if (word == "true") {
+        return (Element::create(true, Element::Position(file, line,
+                                                        start_pos)));
+    } else if (word == "false") {
+        return (Element::create(false, Element::Position(file, line,
+                                                         start_pos)));
+    } else {
+        throwJSONError(std::string("Bad boolean value: ") + word, file,
+                       line, start_pos);
+    }
+    return (ElementPtr());
+}
+
+ElementPtr
+fromStringstreamNull(std::istream& in, const std::string& file,
+                     const int line, int& pos) {
+    // Remember position where the value starts. It will be set in the
+    // Position structure of the Element to be created.
+    const uint32_t start_pos = pos;
+    // This will move the pos to the end of the value.
+    const std::string word = wordFromStringstream(in, pos);
+    if (word == "null") {
+        return (Element::create(Element::Position(file, line, start_pos)));
+    } else {
+        throwJSONError(std::string("Bad null value: ") + word, file,
+                       line, start_pos);
+        return (ElementPtr());
+    }
+}
+
+ElementPtr
+fromStringstreamString(std::istream& in, const std::string& file, int& line,
+                       int& pos) {
+    // Remember position where the value starts. It will be set in the
+    // Position structure of the Element to be created.
+    const uint32_t start_pos = pos;
+    // This will move the pos to the end of the value.
+    const std::string string_value = strFromStringstream(in, file, line, pos);
+    return (Element::create(string_value, Element::Position(file, line,
+                                                            start_pos)));
+}
+
+ElementPtr
+fromStringstreamList(std::istream& in, const std::string& file, int& line,
+                     int& pos, unsigned level) {
+    if (level == 0) {
+        isc_throw(JSONError, "fromJSON elements nested too deeply");
+    }
+    int c = 0;
+    ElementPtr list = Element::createList(Element::Position(file, line, pos));
+    ElementPtr cur_list_element;
+
+    skipChars(in, WHITESPACE, line, pos);
+    while (c != EOF && c != ']') {
+        if (in.peek() != ']') {
+            cur_list_element =
+                Element::fromJSON(in, file, line, pos, level - 1);
+            list->add(cur_list_element);
+            c = skipTo(in, file, line, pos, ",]", WHITESPACE);
+        } else {
+            c = in.get();
+            ++pos;
+        }
+    }
+    return (list);
+}
+
+ElementPtr
+fromStringstreamMap(std::istream& in, const std::string& file, int& line,
+                    int& pos, unsigned level) {
+    if (level == 0) {
+        isc_throw(JSONError, "fromJSON elements nested too deeply");
+    }
+    ElementPtr map = Element::createMap(Element::Position(file, line, pos));
+    skipChars(in, WHITESPACE, line, pos);
+    int c = in.peek();
+    if (c == EOF) {
+        throwJSONError(std::string("Unterminated map, <string> or } expected"), file, line, pos);
+    } else if (c == '}') {
+        // empty map, skip closing curly
+        in.ignore();
+    } else {
+        while (c != EOF && c != '}') {
+            std::string key = strFromStringstream(in, file, line, pos);
+
+            skipTo(in, file, line, pos, ":", WHITESPACE);
+            // skip the :
+
+            ConstElementPtr value =
+                Element::fromJSON(in, file, line, pos, level - 1);
+            map->set(key, value);
+
+            c = skipTo(in, file, line, pos, ",}", WHITESPACE);
+        }
+    }
+    return (map);
+}
+} // end anonymous namespace
+
+std::string
+Element::typeToName(Element::types type) {
+    switch (type) {
+    case Element::integer:
+        return (std::string("integer"));
+    case Element::bigint:
+        return (std::string("bigint"));
+    case Element::real:
+        return (std::string("real"));
+    case Element::boolean:
+        return (std::string("boolean"));
+    case Element::string:
+        return (std::string("string"));
+    case Element::list:
+        return (std::string("list"));
+    case Element::map:
+        return (std::string("map"));
+    case Element::null:
+        return (std::string("null"));
+    case Element::any:
+        return (std::string("any"));
+    default:
+        return (std::string("unknown"));
+    }
+}
+
+Element::types
+Element::nameToType(const std::string& type_name) {
+    if (type_name == "integer") {
+        return (Element::integer);
+    } else if (type_name == "bigint") {
+        return (Element::bigint);
+    } else if (type_name == "real") {
+        return (Element::real);
+    } else if (type_name == "boolean") {
+        return (Element::boolean);
+    } else if (type_name == "string") {
+        return (Element::string);
+    } else if (type_name == "list") {
+        return (Element::list);
+    } else if (type_name == "map") {
+        return (Element::map);
+    } else if (type_name == "named_set") {
+        return (Element::map);
+    } else if (type_name == "null") {
+        return (Element::null);
+    } else if (type_name == "any") {
+        return (Element::any);
+    } else {
+        isc_throw(TypeError, type_name + " is not a valid type name");
+    }
+}
+
+ElementPtr
+Element::fromJSON(std::istream& in, bool preproc) {
+
+    int line = 1, pos = 1;
+    stringstream filtered;
+    if (preproc) {
+        preprocess(in, filtered);
+    }
+
+    ElementPtr value = fromJSON(preproc ? filtered : in, "<istream>", line, pos);
+
+    return (value);
+}
+
+ElementPtr
+Element::fromJSON(std::istream& in, const std::string& file_name, bool preproc) {
+    int line = 1, pos = 1;
+    stringstream filtered;
+    if (preproc) {
+        preprocess(in, filtered);
+    }
+    return (fromJSON(preproc ? filtered : in, file_name, line, pos));
+}
+
+ElementPtr
+Element::fromJSON(std::istream& in, const std::string& file, int& line,
+                  int& pos, unsigned level) {
+    if (level == 0) {
+        isc_throw(JSONError, "fromJSON elements nested too deeply");
+    }
+    int c = 0;
+    ElementPtr element;
+    bool el_read = false;
+    skipChars(in, WHITESPACE, line, pos);
+    while (c != EOF && !el_read) {
+        c = in.get();
+        pos++;
+        switch(c) {
+            case '1':
+            case '2':
+            case '3':
+            case '4':
+            case '5':
+            case '6':
+            case '7':
+            case '8':
+            case '9':
+            case '0':
+            case '-':
+            case '.':
+                in.putback(c);
+                --pos;
+                element = fromStringstreamNumber(in, file, line, pos);
+                el_read = true;
+                break;
+            case 't':
+            case 'f':
+                in.putback(c);
+                --pos;
+                element = fromStringstreamBool(in, file, line, pos);
+                el_read = true;
+                break;
+            case 'n':
+                in.putback(c);
+                --pos;
+                element = fromStringstreamNull(in, file, line, pos);
+                el_read = true;
+                break;
+            case '"':
+                in.putback('"');
+                --pos;
+                element = fromStringstreamString(in, file, line, pos);
+                el_read = true;
+                break;
+            case '[':
+                element = fromStringstreamList(in, file, line, pos, level);
+                el_read = true;
+                break;
+            case '{':
+                element = fromStringstreamMap(in, file, line, pos, level);
+                el_read = true;
+                break;
+            case EOF:
+                break;
+            default:
+                throwJSONError(std::string("error: unexpected character ") + std::string(1, c), file, line, pos);
+                break;
+        }
+    }
+    if (el_read) {
+        return (element);
+    } else {
+        isc_throw(JSONError, "nothing read");
+    }
+}
+
+ElementPtr
+Element::fromJSON(const std::string& in, bool preproc) {
+    std::stringstream ss;
+    ss << in;
+
+    int line = 1, pos = 1;
+    stringstream filtered;
+    if (preproc) {
+        preprocess(ss, filtered);
+    }
+    ElementPtr result(fromJSON(preproc ? filtered : ss, "<string>", line, pos));
+    skipChars(ss, WHITESPACE, line, pos);
+    // ss must now be at end
+    if (ss.peek() != EOF) {
+        throwJSONError("Extra data", "<string>", line, pos);
+    }
+    return result;
+}
+
+ElementPtr
+Element::fromJSONFile(const std::string& file_name, bool preproc) {
+    // zero out the errno to be safe
+    errno = 0;
+
+    std::ifstream infile(file_name.c_str(), std::ios::in | std::ios::binary);
+    if (!infile.is_open()) {
+        const char* error = strerror(errno);
+        isc_throw(InvalidOperation, "failed to read file '" << file_name
+                  << "': " << error);
+    }
+
+    return (fromJSON(infile, file_name, preproc));
+}
+
+// to JSON format
+
+void
+IntElement::toJSON(std::ostream& ss, unsigned) const {
+    ss << intValue();
+}
+
+void
+BigIntElement::toJSON(std::ostream& ss, unsigned) const {
+    ss << bigIntValue();
+}
+
+void
+DoubleElement::toJSON(std::ostream& ss, unsigned) const {
+    // The default output for doubles nicely drops off trailing
+    // zeros, however this produces strings without decimal points
+    // for whole number values.  When reparsed this will create
+    // IntElements not DoubleElements.  Rather than used a fixed
+    // precision, we'll just tack on an ".0" when there is no
+    // fractional nor exponent parts.
+    ostringstream val_ss;
+    val_ss << doubleValue();
+    ss << val_ss.str();
+    if (val_ss.str().find_first_of(".eE") == string::npos) {
+        ss << ".0";
+    }
+}
+
+void
+BoolElement::toJSON(std::ostream& ss, unsigned) const {
+    if (boolValue()) {
+        ss << "true";
+    } else {
+        ss << "false";
+    }
+}
+
+void
+NullElement::toJSON(std::ostream& ss, unsigned) const {
+    ss << "null";
+}
+
+void
+StringElement::toJSON(std::ostream& ss, unsigned) const {
+    ss << "\"";
+    const std::string& str = stringValue();
+    for (size_t i = 0; i < str.size(); ++i) {
+        const signed char c = str[i];
+        // Escape characters as defined in JSON spec
+        // Note that we do not escape forward slash; this
+        // is allowed, but not mandatory.
+        switch (c) {
+        case '"':
+            ss << '\\' << c;
+            break;
+        case '\\':
+            ss << '\\' << c;
+            break;
+        case '\b':
+            ss << '\\' << 'b';
+            break;
+        case '\f':
+            ss << '\\' << 'f';
+            break;
+        case '\n':
+            ss << '\\' << 'n';
+            break;
+        case '\r':
+            ss << '\\' << 'r';
+            break;
+        case '\t':
+            ss << '\\' << 't';
+            break;
+        default:
+            if (c < 0x20 || c == 0x7f) {
+                std::ostringstream esc;
+                esc << "\\u"
+                    << hex
+                    << setw(4)
+                    << setfill('0')
+                    << (static_cast<unsigned>(c) & 0xff);
+                ss << esc.str();
+            } else {
+                ss << c;
+            }
+        }
+    }
+    ss << "\"";
+}
+
+void
+ListElement::toJSON(std::ostream& ss, unsigned level) const {
+    if (level == 0) {
+        isc_throw(BadValue, "toJSON got infinite recursion: "
+                  "arguments include cycles");
+    }
+    ss << "[ ";
+
+    const std::vector<ElementPtr>& v = listValue();
+    bool first = true;
+    for (auto const& it : v) {
+        if (!first) {
+            ss << ", ";
+        } else {
+            first = false;
+        }
+        it->toJSON(ss, level - 1);
+    }
+    ss << " ]";
+}
+
+void
+MapElement::toJSON(std::ostream& ss, unsigned level) const {
+    if (level == 0) {
+        isc_throw(BadValue, "toJSON got infinite recursion: "
+                  "arguments include cycles");
+    }
+    ss << "{ ";
+
+    bool first = true;
+    for (auto const& it : m) {
+        if (!first) {
+            ss << ", ";
+        } else {
+            first = false;
+        }
+        ss << "\"" << it.first << "\": ";
+        if (it.second) {
+            it.second->toJSON(ss, level - 1);
+        } else {
+            ss << "None";
+        }
+    }
+    ss << " }";
+}
+
+// throws when one of the types in the path (except the one
+// we're looking for) is not a MapElement
+// returns 0 if it could simply not be found
+// should that also be an exception?
+ConstElementPtr
+MapElement::find(const std::string& id) const {
+    const size_t sep = id.find('/');
+    if (sep == std::string::npos) {
+        return (get(id));
+    } else {
+        ConstElementPtr ce = get(id.substr(0, sep));
+        if (ce) {
+            // ignore trailing slash
+            if  (sep + 1 != id.size()) {
+                return (ce->find(id.substr(sep + 1)));
+            } else {
+                return (ce);
+            }
+        } else {
+            return (ElementPtr());
+        }
+    }
+}
+
+ElementPtr
+Element::fromWire(const std::string& s) {
+    std::stringstream ss;
+    ss << s;
+    int line = 0, pos = 0;
+    return (fromJSON(ss, "<wire>", line, pos));
+}
+
+ElementPtr
+Element::fromWire(std::stringstream& in, int) {
+    //
+    // Check protocol version
+    //
+    //for (int i = 0 ; i < 4 ; ++i) {
+    //    const unsigned char version_byte = get_byte(in);
+    //    if (PROTOCOL_VERSION[i] != version_byte) {
+    //        throw DecodeError("Protocol version incorrect");
+    //    }
+    //}
+    //length -= 4;
+    int line = 0, pos = 0;
+    return (fromJSON(in, "<wire>", line, pos));
+}
+
+void
+MapElement::set(const std::string& key, ConstElementPtr value) {
+    m[key] = value;
+}
+
+bool
+MapElement::find(const std::string& id, ConstElementPtr& t) const {
+    try {
+        ConstElementPtr p = find(id);
+        if (p) {
+            t = p;
+            return (true);
+        }
+    } catch (const TypeError&) {
+        // ignore
+    }
+    return (false);
+}
+
+bool
+IntElement::equals(const Element& other, unsigned) const {
+    // Let's not be very picky with constraining the integer types to be the
+    // same. Equality is sometimes checked from high-up in the Element hierarchy.
+    // That is a context which, most of the time, does not have information on
+    // the type of integers stored on Elements lower in the hierarchy. So it
+    // would be difficult to differentiate between the integer types.
+    return (other.getType() == Element::integer && i == other.intValue()) ||
+           (other.getType() == Element::bigint && i == other.bigIntValue());
+}
+
+bool
+BigIntElement::equals(const Element& other, unsigned) const {
+    // Let's not be very picky with constraining the integer types to be the
+    // same. Equality is sometimes checked from high-up in the Element hierarchy.
+    // That is a context which, most of the time, does not have information on
+    // the type of integers stored on Elements lower in the hierarchy. So it
+    // would be difficult to differentiate between the integer types.
+    return (other.getType() == Element::bigint && i_ == other.bigIntValue()) ||
+           (other.getType() == Element::integer && i_ == other.intValue());
+}
+
+bool
+DoubleElement::equals(const Element& other, unsigned) const {
+    return (other.getType() == Element::real) &&
+           (fabs(d - other.doubleValue()) < 1e-14);
+}
+
+bool
+BoolElement::equals(const Element& other, unsigned) const {
+    return (other.getType() == Element::boolean) &&
+           (b == other.boolValue());
+}
+
+bool
+NullElement::equals(const Element& other, unsigned) const {
+    return (other.getType() == Element::null);
+}
+
+bool
+StringElement::equals(const Element& other, unsigned) const {
+    return (other.getType() == Element::string) &&
+           (s == other.stringValue());
+}
+
+bool
+ListElement::equals(const Element& other, unsigned level) const {
+    if (level == 0) {
+        isc_throw(BadValue, "equals got infinite recursion: "
+                  "arguments include cycles");
+    }
+    if (other.getType() == Element::list) {
+        const size_t s = size();
+        if (s != other.size()) {
+            return (false);
+        }
+        for (size_t i = 0; i < s; ++i) {
+            if (!get(i)->equals(*other.get(i), level - 1)) {
+                return (false);
+            }
+        }
+        return (true);
+    } else {
+        return (false);
+    }
+}
+
+void
+ListElement::sort(std::string const& index /* = std::string() */) {
+    if (l.empty()) {
+        return;
+    }
+
+    int const t(l.at(0)->getType());
+    std::function<bool(ElementPtr, ElementPtr)> comparator;
+    if (t == map) {
+        if (index.empty()) {
+            isc_throw(BadValue, "index required when sorting maps");
+        }
+        comparator = [&](ElementPtr const& a, ElementPtr const& b) {
+            ConstElementPtr const& ai(a->get(index));
+            ConstElementPtr const& bi(b->get(index));
+            if (ai && bi) {
+                return *ai < *bi;
+            }
+            return true;
+        };
+    } else if (t == list) {
+        // Nested lists. Not supported.
+        return;
+    } else {
+        // Assume scalars.
+        if (!index.empty()) {
+            isc_throw(BadValue, "index given when sorting scalars?");
+        }
+        comparator = [&](ElementPtr const& a, ElementPtr const& b) {
+            return *a < *b;
+        };
+    }
+
+    std::sort(l.begin(), l.end(), comparator);
+}
+
+bool
+MapElement::equals(const Element& other, unsigned level) const {
+    if (level == 0) {
+        isc_throw(BadValue, "equals got infinite recursion: "
+                  "arguments include cycles");
+    }
+    if (other.getType() == Element::map) {
+        if (size() != other.size()) {
+            return (false);
+        }
+        for (auto const& kv : mapValue()) {
+            auto key = kv.first;
+            if (other.contains(key)) {
+                if (!get(key)->equals(*other.get(key), level - 1)) {
+                    return (false);
+                }
+            } else {
+                return (false);
+            }
+        }
+        return (true);
+    } else {
+        return (false);
+    }
+}
+
+bool
+isNull(ConstElementPtr p) {
+    return (!p);
+}
+
+void
+removeIdentical(ElementPtr a, ConstElementPtr b) {
+    if (!b) {
+        return;
+    }
+    if (a->getType() != Element::map || b->getType() != Element::map) {
+        isc_throw(TypeError, "Non-map Elements passed to removeIdentical");
+    }
+
+    // As maps do not allow entries with multiple keys, we can either iterate
+    // over a checking for identical entries in b or vice-versa.  As elements
+    // are removed from a if a match is found, we choose to iterate over b to
+    // avoid problems with element removal affecting the iterator.
+    for (auto const& kv : b->mapValue()) {
+        auto key = kv.first;
+        if (a->contains(key)) {
+            if (a->get(key)->equals(*b->get(key))) {
+                a->remove(key);
+            }
+        }
+    }
+}
+
+ConstElementPtr
+removeIdentical(ConstElementPtr a, ConstElementPtr b) {
+    ElementPtr result = Element::createMap();
+
+    if (!b) {
+        return (result);
+    }
+
+    if (a->getType() != Element::map || b->getType() != Element::map) {
+        isc_throw(TypeError, "Non-map Elements passed to removeIdentical");
+    }
+
+    for (auto const& kv : a->mapValue()) {
+        auto key = kv.first;
+        if (!b->contains(key) ||
+            !a->get(key)->equals(*b->get(key))) {
+            result->set(key, kv.second);
+        }
+    }
+
+    return (result);
+}
+
+void
+merge(ElementPtr element, ConstElementPtr other) {
+    if (element->getType() != Element::map ||
+        other->getType() != Element::map) {
+        isc_throw(TypeError, "merge arguments not MapElements");
+    }
+
+    for (auto const& kv : other->mapValue()) {
+        auto key = kv.first;
+        auto value = kv.second;
+        if (value && value->getType() != Element::null) {
+            element->set(key, value);
+        } else if (element->contains(key)) {
+            element->remove(key);
+        }
+    }
+}
+
+void
+mergeDiffAdd(ElementPtr& element, ElementPtr& other,
+             HierarchyDescriptor& hierarchy, std::string key, size_t idx,
+             unsigned level) {
+    if (level == 0) {
+        isc_throw(BadValue, "mergeDiffAdd got infinite recursion: "
+                  "arguments include cycles");
+    }
+    if (element->getType() != other->getType()) {
+        isc_throw(TypeError, "mergeDiffAdd arguments not same type");
+    }
+
+    if (element->getType() == Element::list) {
+        // Store new elements in a separate container so we don't overwrite
+        // options as we add them (if there are duplicates).
+        ElementPtr new_elements = Element::createList();
+        for (auto const& right : other->listValue()) {
+            // Check if we have any description of the key in the configuration
+            // hierarchy.
+            auto f = hierarchy[idx].find(key);
+            if (f != hierarchy[idx].end()) {
+                bool found = false;
+                ElementPtr mutable_right = boost::const_pointer_cast<Element>(right);
+                for (auto const& left : element->listValue()) {
+                    ElementPtr mutable_left = boost::const_pointer_cast<Element>(left);
+                    // Check if the elements refer to the same configuration
+                    // entity.
+                    if (f->second.match_(mutable_left, mutable_right)) {
+                        found = true;
+                        mergeDiffAdd(mutable_left, mutable_right, hierarchy,
+                                     key, idx, level - 1);
+                    }
+                }
+                if (!found) {
+                    new_elements->add(right);
+                }
+            } else {
+                new_elements->add(right);
+            }
+        }
+        // Finally add the new elements.
+        for (auto const& right : new_elements->listValue()) {
+            element->add(right);
+        }
+        return;
+    }
+
+    if (element->getType() == Element::map) {
+        for (auto const& kv : other->mapValue()) {
+            auto current_key = kv.first;
+            auto value = boost::const_pointer_cast<Element>(kv.second);
+            if (value && value->getType() != Element::null) {
+                if (element->contains(current_key) &&
+                    (value->getType() == Element::map ||
+                     value->getType() == Element::list)) {
+                    ElementPtr mutable_element = boost::const_pointer_cast<Element>(element->get(current_key));
+                    mergeDiffAdd(mutable_element, value, hierarchy,
+                                 current_key, idx + 1, level - 1);
+                } else {
+                    element->set(current_key, value);
+                }
+            }
+        }
+        return;
+    }
+    element = other;
+}
+
+void
+mergeDiffDel(ElementPtr& element, ElementPtr& other,
+             HierarchyDescriptor& hierarchy, std::string key, size_t idx,
+             unsigned level) {
+    if (level == 0) {
+        isc_throw(BadValue, "mergeDiffDel got infinite recursion: "
+                  "arguments include cycles");
+    }
+    if (element->getType() != other->getType()) {
+        isc_throw(TypeError, "mergeDiffDel arguments not same type");
+    }
+
+    if (element->getType() == Element::list) {
+        for (auto const& value : other->listValue()) {
+            ElementPtr mutable_right = boost::const_pointer_cast<Element>(value);
+            for (uint32_t iter = 0; iter < element->listValue().size();) {
+                bool removed = false;
+                // Check if we have any description of the key in the
+                // configuration hierarchy.
+                auto f = hierarchy[idx].find(key);
+                if (f != hierarchy[idx].end()) {
+                    ElementPtr mutable_left = boost::const_pointer_cast<Element>(element->listValue().at(iter));
+                    // Check if the elements refer to the same configuration
+                    // entity.
+                    if (f->second.match_(mutable_left, mutable_right)) {
+                        // Check if the user supplied data only contains
+                        // identification information, so the intent is to
+                        // delete the element, not just element data.
+                        if (f->second.no_data_(mutable_right)) {
+                            element->remove(iter);
+                            removed = true;
+                        } else {
+                            mergeDiffDel(mutable_left, mutable_right,
+                                         hierarchy, key, idx, level - 1);
+                            if (mutable_left->empty()) {
+                                element->remove(iter);
+                                removed = true;
+                            }
+                        }
+                    }
+                } else if (element->listValue().at(iter)->equals(*value)) {
+                    element->remove(iter);
+                    removed = true;
+                }
+                if (!removed) {
+                    ++iter;
+                }
+            }
+        }
+        return;
+    }
+
+    if (element->getType() == Element::map) {
+        // If the resulting element still contains data, we need to restore the
+        // key parameters, so we store them here.
+        ElementPtr new_elements = Element::createMap();
+        for (auto const& kv : other->mapValue()) {
+            auto current_key = kv.first;
+            auto value = boost::const_pointer_cast<Element>(kv.second);
+            if (value && value->getType() != Element::null) {
+                if (element->contains(current_key)) {
+                    ElementPtr mutable_element = boost::const_pointer_cast<Element>(element->get(current_key));
+                    if (mutable_element->getType() == Element::map ||
+                        mutable_element->getType() == Element::list) {
+                        mergeDiffDel(mutable_element, value, hierarchy,
+                                     current_key, idx + 1, level - 1);
+                        if (mutable_element->empty()) {
+                            element->remove(current_key);
+                        }
+                    } else {
+                        // Check if we have any description of the key in the
+                        // configuration hierarchy.
+                        auto f = hierarchy[idx].find(key);
+                        if (f != hierarchy[idx].end()) {
+                            // Check if the key is used for element
+                            // identification.
+                            if (f->second.is_key_(current_key)) {
+                                // Store the key parameter.
+                                new_elements->set(current_key, mutable_element);
+                            }
+                        }
+                        element->remove(current_key);
+                    }
+                }
+            }
+        }
+        // If the element still contains data, restore the key elements.
+        if (element->size()) {
+            for (auto const& kv : new_elements->mapValue()) {
+                element->set(kv.first, kv.second);
+            }
+        }
+        return;
+    }
+    element = ElementPtr(new NullElement());
+}
+
+void
+extend(const std::string& container, const std::string& extension,
+       ElementPtr& element, ElementPtr& other, HierarchyDescriptor& hierarchy,
+       std::string key, size_t idx, bool alter, unsigned level) {
+
+    if (level == 0) {
+        isc_throw(BadValue, "extend got infinite recursion: "
+                  "arguments include cycles");
+    }
+    if (element->getType() != other->getType()) {
+        isc_throw(TypeError, "extend arguments not same type");
+    }
+
+    if (element->getType() == Element::list) {
+        for (auto const& right : other->listValue()) {
+            // Check if we have any description of the key in the configuration
+            // hierarchy.
+            auto f = hierarchy[idx].find(key);
+            if (f != hierarchy[idx].end()) {
+                ElementPtr mutable_right = boost::const_pointer_cast<Element>(right);
+                for (auto const& left : element->listValue()) {
+                    ElementPtr mutable_left = boost::const_pointer_cast<Element>(left);
+                    if (container == key) {
+                        alter = true;
+                    }
+                    if (f->second.match_(mutable_left, mutable_right)) {
+                        extend(container, extension, mutable_left, mutable_right,
+                               hierarchy, key, idx, alter, level - 1);
+                    }
+                }
+            }
+        }
+        return;
+    }
+
+    if (element->getType() == Element::map) {
+        for (auto const& kv : other->mapValue()) {
+            auto current_key = kv.first;
+            auto value = boost::const_pointer_cast<Element>(kv.second);
+            if (value && value->getType() != Element::null) {
+                if (element->contains(current_key) &&
+                    (value->getType() == Element::map ||
+                     value->getType() == Element::list)) {
+                    ElementPtr mutable_element = boost::const_pointer_cast<Element>(element->get(current_key));
+                    if (container == key) {
+                        alter = true;
+                    }
+                    extend(container, extension, mutable_element, value,
+                           hierarchy, current_key, idx + 1, alter, level - 1);
+                } else if (alter && current_key == extension) {
+                    element->set(current_key, value);
+                }
+            }
+        }
+        return;
+    }
+}
+
+ElementPtr
+copy(ConstElementPtr from, unsigned level) {
+    if (!from) {
+        isc_throw(BadValue, "copy got a null pointer");
+    }
+
+    auto pos = from->getPosition();
+    int from_type = from->getType();
+    if (from_type == Element::integer) {
+        return (ElementPtr(new IntElement(from->intValue(), pos)));
+    } else if (from_type == Element::real) {
+        return (ElementPtr(new DoubleElement(from->doubleValue(), pos)));
+    } else if (from_type == Element::boolean) {
+        return (ElementPtr(new BoolElement(from->boolValue(), pos)));
+    } else if (from_type == Element::null) {
+        return (ElementPtr(new NullElement()));
+    } else if (from_type == Element::string) {
+        return (ElementPtr(new StringElement(from->stringValue(), pos)));
+    } else if (from_type == Element::list) {
+        ElementPtr result = ElementPtr(new ListElement(pos));
+        for (auto const& elem : from->listValue()) {
+            if (level == 0) {
+                result->add(elem);
+            } else {
+                result->add(copy(elem, level - 1));
+            }
+        }
+        return (result);
+    } else if (from_type == Element::map) {
+        ElementPtr result = ElementPtr(new MapElement(pos));
+        for (auto const& kv : from->mapValue()) {
+            auto key = kv.first;
+            auto value = kv.second;
+            if (level == 0) {
+                result->set(key, value);
+            } else {
+                result->set(key, copy(value, level - 1));
+            }
+        }
+        return (result);
+    } else {
+        isc_throw(BadValue, "copy got an element of type: " << from_type);
+    }
+}
+
+namespace {
+
+// Helper function which blocks infinite recursion
+bool
+isEquivalent0(ConstElementPtr a, ConstElementPtr b, unsigned level) {
+    // check looping forever on cycles
+    if (!level) {
+        isc_throw(BadValue, "isEquivalent got infinite recursion: "
+                  "arguments include cycles");
+    }
+    if (!a || !b) {
+        isc_throw(BadValue, "isEquivalent got a null pointer");
+    }
+    // check types
+    if (a->getType() != b->getType()) {
+        return (false);
+    }
+    if (a->getType() == Element::list) {
+        // check empty
+        if (a->empty()) {
+            return (b->empty());
+        }
+        // check size
+        if (a->size() != b->size()) {
+            return (false);
+        }
+
+        // copy b into a list
+        const size_t s = a->size();
+        std::list<ConstElementPtr> l;
+        for (size_t i = 0; i < s; ++i) {
+            l.push_back(b->get(i));
+        }
+
+        // iterate on a
+        for (size_t i = 0; i < s; ++i) {
+            ConstElementPtr item = a->get(i);
+            // lookup this item in the list
+            bool found = false;
+            for (auto it = l.begin(); it != l.end(); ++it) {
+                // if found in the list remove it
+                if (isEquivalent0(item, *it, level - 1)) {
+                    found = true;
+                    l.erase(it);
+                    break;
+                }
+            }
+            // if not found argument differs
+            if (!found) {
+                return (false);
+            }
+        }
+
+        // sanity check: the list must be empty
+        if (!l.empty()) {
+            isc_throw(Unexpected, "isEquivalent internal error");
+        }
+        return (true);
+    } else if (a->getType() == Element::map) {
+        // check sizes
+        if (a->size() != b->size()) {
+            return (false);
+        }
+        // iterate on the first map
+        for (auto const& kv : a->mapValue()) {
+            // get the b value for the given keyword and recurse
+            ConstElementPtr item = b->get(kv.first);
+            if (!item || !isEquivalent0(kv.second, item, level - 1)) {
+                return (false);
+            }
+        }
+        return (true);
+    } else {
+        return (a->equals(*b));
+    }
+}
+
+} // end anonymous namespace
+
+bool
+isEquivalent(ConstElementPtr a, ConstElementPtr b) {
+    return (isEquivalent0(a, b, 100));
+}
+
+namespace {
+
+void
+prettyPrint0(ConstElementPtr element, std::ostream& out,
+             unsigned indent, unsigned step, unsigned level) {
+    if (level == 0) {
+        isc_throw(BadValue, "prettyPrint got infinite recursion: "
+                  "arguments include cycles");
+    }
+    if (!element) {
+        isc_throw(BadValue, "prettyPrint got a null pointer");
+    }
+    if (element->getType() == Element::list) {
+        // empty list case
+        if (element->empty()) {
+            out << "[ ]";
+            return;
+        }
+
+        // complex ? multiline : oneline
+        if (!element->get(0)) {
+            isc_throw(BadValue, "prettyPrint got a null pointer");
+        }
+        int first_type = element->get(0)->getType();
+        bool complex = false;
+        if ((first_type == Element::list) || (first_type == Element::map)) {
+            complex = true;
+        }
+        std::string separator = complex ? ",\n" : ", ";
+
+        // open the list
+        out << "[" << (complex ? "\n" : " ");
+
+        // iterate on items
+        auto const& l = element->listValue();
+        bool first = true;
+        for (auto const& it : l) {
+            // add the separator if not the first item
+            if (!first) {
+                out << separator;
+            } else {
+                first = false;
+            }
+            // add indentation
+            if (complex) {
+                out << std::string(indent + step, ' ');
+            }
+            // recursive call
+            prettyPrint0(it, out, indent + step, step, level - 1);
+        }
+
+        // close the list
+        if (complex) {
+            out << "\n" << std::string(indent, ' ');
+        } else {
+            out << " ";
+        }
+        out << "]";
+    } else if (element->getType() == Element::map) {
+        // empty map case
+        if (element->size() == 0) {
+            out << "{ }";
+            return;
+        }
+
+        // open the map
+        out << "{\n";
+
+        // iterate on keyword: value
+        auto const& m = element->mapValue();
+        bool first = true;
+        for (auto const& it : m) {
+            // add the separator if not the first item
+            if (first) {
+                first = false;
+            } else {
+                out << ",\n";
+            }
+            // add indentation
+            out << std::string(indent + step, ' ');
+            // add keyword:
+            out << "\"" << it.first << "\": ";
+            // recursive call
+            prettyPrint0(it.second, out, indent + step, step, level - 1);
+        }
+
+        // close the map
+        out << "\n" << std::string(indent, ' ') << "}";
+    } else {
+        // not a list or a map
+        element->toJSON(out);
+    }
+}
+
+} // end anonymous namespace
+
+void
+prettyPrint(ConstElementPtr element, std::ostream& out,
+            unsigned indent, unsigned step) {
+    prettyPrint0(element, out, indent, step, Element::MAX_NESTING_LEVEL);
+}
+
+std::string
+prettyPrint(ConstElementPtr element, unsigned indent, unsigned step) {
+    std::stringstream ss;
+    prettyPrint(element, ss, indent, step);
+    return (ss.str());
+}
+
+void Element::preprocess(std::istream& in, std::stringstream& out) {
+
+    std::string line;
+
+    while (std::getline(in, line)) {
+        // If this is a comments line, replace it with empty line
+        // (so the line numbers will still match
+        if (!line.empty() && line[0] == '#') {
+            line = "";
+        }
+
+        // getline() removes end line characters. Unfortunately, we need
+        // it for getting the line numbers right (in case we report an
+        // error.
+        out << line;
+        out << "\n";
+    }
+}
+
+namespace {
+
+// Type of arcs.
+typedef std::set<ConstElementPtr> Arc;
+
+// Helper function walking on the supposed tree.
+bool
+IsCircular0(ConstElementPtr element, Arc arc) {
+    // Sanity check.
+    if (!element) {
+        return (false);
+    }
+    auto type = element->getType();
+    // Container?
+    if ((type != Element::list) && (type != Element::map)) {
+        return (false);
+    }
+    // Empty? A cycle requires at least one element.
+    if (element->empty()) {
+        return (false);
+    }
+    // In the arc?
+    if (arc.count(element) > 0) {
+        return (true);
+    }
+    // This requires to work on a copy of the arc but it should be small.
+    arc.insert(element);
+    if (type == Element::list) {
+        for (auto const& it : element->listValue()) {
+            if (IsCircular0(it, arc)) {
+                return (true);
+            }
+        }
+        return (false);
+    }
+    // The argument is a map.
+    for (auto const& it : element->mapValue()) {
+        if (IsCircular0(it.second, arc)) {
+            return (true);
+        }
+    }
+    return (false);
+}
+
+} // end anonymous namespace
+
+bool
+IsCircular(ConstElementPtr element) {
+    return (IsCircular0(element, Arc()));
+}
+
+unsigned
+getNestDepth(ConstElementPtr element, unsigned max_depth) {
+    if (max_depth == 0U) {
+        return (0U);
+    }
+    if (!element) {
+        return (0U);
+    }
+    unsigned ret = 1U;
+    if (element->getType() == Element::list) {
+        for (auto const& i : element->listValue()) {
+            unsigned sub = getNestDepth(i, max_depth - 1);
+            if (sub == max_depth - 1) {
+                return (max_depth);
+            }
+            if (sub + 1 > ret) {
+                ret = sub + 1;
+            }
+        }
+    } else if (element->getType() == Element::map) {
+        for (auto const& i : element->mapValue()) {
+            unsigned sub = getNestDepth(i.second, max_depth - 1);
+            if (sub == max_depth - 1) {
+                return (max_depth);
+            }
+            if (sub + 1 > ret) {
+                ret = sub + 1;
+            }
+        }
+
+    }
+    return (ret);
+}
+
+} // end of isc::data namespace
+} // end of isc namespace

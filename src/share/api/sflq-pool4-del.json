@@ -1,0 +1,30 @@
+{
+    "access": "write",
+    "avail": "3.1.9",
+    "brief": [
+        "This command deletes a pool that exactly matches an address range from the lease back end."
+    ],
+    "cmd-syntax": [
+        "{",
+        "   \"command\": \"sflq-pool4-del\",",
+        "   \"arguments\": {",
+        "       \"start-address\": \"192.0.2.0\",",
+        "       \"end-address\": \"192.0.2.255\",",
+        "       \"force\": true",
+        "   }",
+        "}"
+    ],
+    "description": "See <xref linkend=\"command-sflq-pool4-del\"/>",
+    "hook": "lease_cmds",
+    "name": "sflq-pool4-del",
+    "resp-syntax": [
+        "{",
+        "\"result\": 0,",
+        "\"text\": \"1 pool(s) deleted.\"",
+        "}"
+    ],
+    "support": [
+        "kea-dhcp4",
+        "kea-dhcp6"
+    ]
+}

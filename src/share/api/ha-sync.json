@@ -1,0 +1,23 @@
+{
+    "access": "write",
+    "avail": "1.4.0",
+    "brief": [
+        "This command instructs the server running in HA mode to synchronize its local lease database with the selected peer."
+    ],
+    "cmd-syntax": [
+        "{",
+        "    \"command\": \"ha-sync\",",
+        "    \"arguments\": {",
+        "        \"server-name\": \"server1\",",
+        "        \"max-period\": 60",
+        "    }",
+        "}"
+    ],
+    "description": "See <xref linkend=\"command-ha-sync\"/>",
+    "hook": "high_availability",
+    "name": "ha-sync",
+    "support": [
+        "kea-dhcp4",
+        "kea-dhcp6"
+    ]
+}

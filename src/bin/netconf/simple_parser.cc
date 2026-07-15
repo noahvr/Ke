@@ -1,0 +1,193 @@
+// Copyright (C) 2018-2026 Internet Systems Consortium, Inc. ("ISC")
+//
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+#include <config.h>
+
+#include <asiolink/io_service_mgr.h>
+#include <cc/data.h>
+#include <cc/dhcp_config_error.h>
+#include <hooks/hooks_manager.h>
+#include <hooks/hooks_parser.h>
+#include <netconf/netconf_config.h>
+#include <netconf/simple_parser.h>
+
+using namespace isc::data;
+using namespace isc::asiolink;
+
+namespace isc {
+namespace netconf {
+/// @brief This sets of arrays define the default values in various scopes
+///        of the Netconf Configuration.
+///
+/// Each of those is documented in @file netconf/simple_parser.cc. This
+/// is different than most other comments in Kea code. The reason
+/// for placing those in .cc rather than .h file is that it
+/// is expected to be one centralized place to look at for
+/// the default values. This is expected to be looked at also by
+/// people who are not skilled in C or C++, so they may be
+/// confused with the differences between declaration and definition.
+/// As such, there's one file to look at that hopefully is readable
+/// without any C or C++ skills.
+///
+/// @{
+
+/// @brief This table defines default values for global options.
+///
+/// These are global Netconf parameters.
+const SimpleDefaults NetconfSimpleParser::NETCONF_DEFAULTS = {
+    { "boot-update",       Element::boolean, "true" },
+    { "subscribe-changes", Element::boolean, "true" },
+    { "validate-changes",  Element::boolean, "true" }
+};
+
+/// @brief Supplies defaults for control-socket elements
+const SimpleDefaults NetconfSimpleParser::CTRL_SOCK_DEFAULTS = {
+    { "socket-type", Element::string, "" },
+    { "socket-name", Element::string, "" },
+    { "socket-url" , Element::string, "http://127.0.0.1:8000/" }
+};
+
+/// @brief Supplies defaults for dhcp4 managed server
+const SimpleDefaults NetconfSimpleParser::DHCP4_DEFAULTS = {
+    { "model", Element::string, "kea-dhcp4-server" }
+};
+
+/// @brief Supplies defaults for dhcp6 managed server
+const SimpleDefaults NetconfSimpleParser::DHCP6_DEFAULTS = {
+    { "model", Element::string, "kea-dhcp6-server" }
+};
+
+/// @brief Supplies defaults for d2 managed server
+const SimpleDefaults NetconfSimpleParser::D2_DEFAULTS = {
+    { "model", Element::string, "kea-dhcp-ddns" }
+};
+
+/// @brief List of parameters that can be inherited to managed-servers scope.
+///
+/// Some parameters may be defined on both global (directly in Netconf) and
+/// servers (Netconf/managed-servers/...) scope. If not defined in the
+/// managed-servers scope, the value is being inherited (derived) from
+/// the global scope. This array lists all of such parameters.
+const ParamsList NetconfSimpleParser::INHERIT_TO_SERVERS = {
+    "boot-update",
+    "subscribe-changes",
+    "validate-changes"
+};
+
+/// @}
+
+/// ---------------------------------------------------------------------------
+/// --- end of default values -------------------------------------------------
+/// ---------------------------------------------------------------------------
+
+size_t NetconfSimpleParser::setAllDefaults(const ElementPtr& global) {
+    size_t cnt = 0;
+
+    // Set global defaults first.
+    cnt = setDefaults(global, NETCONF_DEFAULTS);
+
+    ConstElementPtr servers = global->get("managed-servers");
+    if (servers) {
+        ElementPtr mutable_servers(copy(servers, 0));
+        for (auto const& it : mutable_servers->mapValue()) {
+            ElementPtr server(copy(it.second, 0));
+            cnt += setServerDefaults(it.first, server);
+            mutable_servers->set(it.first, server);
+        }
+        global->set("managed-servers", mutable_servers);
+    }
+
+    return (cnt);
+}
+
+size_t NetconfSimpleParser::deriveParameters(ElementPtr global) {
+    size_t cnt = 0;
+
+    // Now derive global parameters into managed-servers.
+    ConstElementPtr servers = global->get("managed-servers");
+    if (servers) {
+        ElementPtr mutable_servers(copy(servers, 0));
+        for (auto const& it : mutable_servers->mapValue()) {
+            ElementPtr mutable_server = copy(it.second, 0);
+            cnt += SimpleParser::deriveParams(global,
+                                              mutable_server,
+                                              INHERIT_TO_SERVERS);
+            mutable_servers->set(it.first, mutable_server);
+        }
+        global->set("managed-servers", mutable_servers);
+    }
+
+    return (cnt);
+}
+
+size_t
+NetconfSimpleParser::setServerDefaults(const std::string name,
+                                       ElementPtr server) {
+    size_t cnt = 0;
+
+    if (name == "dhcp4") {
+        cnt += setDefaults(server, DHCP4_DEFAULTS);
+    } else if (name == "dhcp6") {
+        cnt += setDefaults(server, DHCP6_DEFAULTS);
+    } else if (name == "d2") {
+        cnt += setDefaults(server, D2_DEFAULTS);
+    }
+
+    ConstElementPtr ctrl_sock = server->get("control-socket");
+    if (!ctrl_sock) {
+        return (cnt);
+    }
+    ElementPtr mutable_ctrl_sock(copy(ctrl_sock, 0));
+    cnt += setDefaults(mutable_ctrl_sock, CTRL_SOCK_DEFAULTS);
+    server->set("control-socket", mutable_ctrl_sock);
+
+    return (cnt);
+}
+
+void
+NetconfSimpleParser::parse(const NetconfConfigPtr& ctx,
+                           const ElementPtr& config,
+                           bool check_only) {
+
+    // User context can be done at anytime.
+    ConstElementPtr user_context = config->get("user-context");
+    if (user_context) {
+        ctx->setContext(user_context);
+    }
+
+    // get managed servers.
+    ConstElementPtr servers = config->get("managed-servers");
+    if (servers) {
+        for (auto const& it : servers->mapValue()) {
+            ServerConfigParser server_parser;
+            CfgServerPtr server = server_parser.parse(it.second, it.first);
+            ctx->getCfgServersMap()->insert(make_pair(it.first, server));
+        }
+    }
+
+    // Finally, let's get the hook libs!
+    using namespace isc::hooks;
+    HooksConfig& libraries = ctx->getHooksConfig();
+    ConstElementPtr hooks = config->get("hooks-libraries");
+    if (hooks) {
+        HooksLibrariesParser hooks_parser;
+        hooks_parser.parse(libraries, hooks);
+        libraries.verifyLibraries(hooks->getPosition(), false);
+    }
+
+    if (!check_only) {
+        // This occurs last as if it succeeds, there is no easy way
+        // revert it.  As a result, the failure to commit a subsequent
+        // change causes problems when trying to roll back.
+        HooksManager::prepareUnloadLibraries();
+        static_cast<void>(HooksManager::unloadLibraries());
+        IOServiceMgr::instance().clearIOServices();
+        libraries.loadLibraries(false);
+    }
+}
+
+}  // namespace netconf
+}  // namespace isc

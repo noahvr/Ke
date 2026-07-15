@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="us-ascii" standalone="no"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" contentStyleType="text/css" height="832px" preserveAspectRatio="none" style="width:376px;height:832px;background:#FFFFFF;" version="1.1" viewBox="0 0 376 832" width="376px" zoomAndPan="magnify">
+  <defs/>
+  <g>
+    <text fill="#000000" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacing" textLength="333" x="20" y="34.9659">Append requested options algorithm (Kea 1.8.0)</text>
+    <rect fill="#F1F1F1" height="36.3441" rx="12.5" ry="12.5" style="stroke:#181818;stroke-width:0.5;" width="158" x="103.5" y="51.0679"/>
+    <text fill="#000000" font-family="sans-serif" font-size="12" lengthAdjust="spacing" textLength="138" x="113.5" y="73.896">get configured option list</text>
+    <rect fill="#F1F1F1" height="36.3441" rx="12.5" ry="12.5" style="stroke:#181818;stroke-width:0.5;" width="262" x="51.5" y="107.412"/>
+    <text fill="#000000" font-family="sans-serif" font-size="12" lengthAdjust="spacing" textLength="242" x="61.5" y="130.2401">get parameter request list (PRL) from query</text>
+    <rect fill="#F1F1F1" height="36.3441" rx="12.5" ry="12.5" style="stroke:#181818;stroke-width:0.5;" width="231" x="67" y="207.7561"/>
+    <text fill="#000000" font-family="sans-serif" font-size="12" lengthAdjust="spacing" textLength="211" x="77" y="230.5842">get configured options in dhcp4 space</text>
+    <rect fill="#F1F1F1" height="36.3441" rx="12.5" ry="12.5" style="stroke:#181818;stroke-width:0.5;" width="181" x="92" y="308.1003"/>
+    <text fill="#000000" font-family="sans-serif" font-size="12" lengthAdjust="spacing" textLength="161" x="102" y="330.9283">push back option code to PRL</text>
+    <polygon fill="#F1F1F1" points="114.5,264.1003,250.5,264.1003,262.5,276.1003,250.5,288.1003,114.5,288.1003,102.5,276.1003,114.5,264.1003" style="stroke:#181818;stroke-width:0.5;"/>
+    <text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="136" x="114.5" y="280.3682">for each persistent option</text>
+    <polygon fill="#F1F1F1" points="75,163.7561,290,163.7561,302,175.7561,290,187.7561,75,187.7561,63,175.7561,75,163.7561" style="stroke:#181818;stroke-width:0.5;"/>
+    <text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="215" x="75" y="180.0241">for each item from configured option list</text>
+    <rect fill="#F1F1F1" height="36.3441" rx="12.5" ry="12.5" style="stroke:#181818;stroke-width:0.5;" width="231" x="67" y="545.9353"/>
+    <text fill="#000000" font-family="sans-serif" font-size="12" lengthAdjust="spacing" textLength="211" x="77" y="568.7634">get configured options in dhcp4 space</text>
+    <rect fill="#F1F1F1" height="36.3441" rx="12.5" ry="12.5" style="stroke:#181818;stroke-width:0.5;" width="148" x="108.5" y="651.7704"/>
+    <text fill="#000000" font-family="sans-serif" font-size="12" lengthAdjust="spacing" textLength="128" x="118.5" y="674.5985">add option to response</text>
+    <polygon fill="#F1F1F1" points="166.5,602.2794,198.5,602.2794,210.5,614.2794,198.5,626.2794,166.5,626.2794,154.5,614.2794,166.5,602.2794" style="stroke:#181818;stroke-width:0.5;"/>
+    <text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="21" x="186.5" y="638.0383">first</text>
+    <text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="32" x="166.5" y="618.5474">found</text>
+    <text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="145" x="210.5" y="611.0565">not found or already found</text>
+    <polygon fill="#F1F1F1" points="182.5,708.1145,194.5,720.1145,182.5,732.1145,170.5,720.1145,182.5,708.1145" style="stroke:#181818;stroke-width:0.5;"/>
+    <polygon fill="#F1F1F1" points="75,501.9353,290,501.9353,302,513.9353,290,525.9353,75,525.9353,63,513.9353,75,501.9353" style="stroke:#181818;stroke-width:0.5;"/>
+    <text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="215" x="75" y="518.2033">for each item from configured option list</text>
+    <polygon fill="#F1F1F1" points="108,452.4444,257,452.4444,269,464.4444,257,476.4444,108,476.4444,96,464.4444,108,452.4444" style="stroke:#181818;stroke-width:0.5;"/>
+    <text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="17" x="186.5" y="488.2033">yes</text>
+    <text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="149" x="108" y="468.7123">option is not set in response</text>
+    <text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="14" x="269" y="461.2214">no</text>
+    <polygon fill="#F1F1F1" points="182.5,774.1145,194.5,786.1145,182.5,798.1145,170.5,786.1145,182.5,774.1145" style="stroke:#181818;stroke-width:0.5;"/>
+    <polygon fill="#F1F1F1" points="129,408.4444,236,408.4444,248,420.4444,236,432.4444,129,432.4444,117,420.4444,129,408.4444" style="stroke:#181818;stroke-width:0.5;"/>
+    <text fill="#000000" font-family="sans-serif" font-size="11" lengthAdjust="spacing" textLength="107" x="129" y="424.7123">for each code in PRL</text>
+    <ellipse cx="26" cy="463.4444" fill="none" rx="11" ry="11" style="stroke:#222222;stroke-width:1.0;"/>
+    <ellipse cx="26" cy="463.4444" fill="#222222" rx="6" ry="6" style="stroke:#111111;stroke-width:1.0;"/>
+    <line style="stroke:#181818;stroke-width:1.0;" x1="182.5" x2="182.5" y1="87.412" y2="107.412"/>
+    <polygon fill="#181818" points="178.5,97.412,182.5,107.412,186.5,97.412,182.5,101.412" style="stroke:#181818;stroke-width:1.0;"/>
+    <line style="stroke:#181818;stroke-width:1.0;" x1="182.5" x2="182.5" y1="288.1003" y2="308.1003"/>
+    <polygon fill="#181818" points="178.5,298.1003,182.5,308.1003,186.5,298.1003,182.5,302.1003" style="stroke:#181818;stroke-width:1.0;"/>
+    <line style="stroke:#181818;stroke-width:1.0;" x1="182.5" x2="182.5" y1="344.4444" y2="354.4444"/>
+    <line style="stroke:#181818;stroke-width:1.0;" x1="182.5" x2="285" y1="354.4444" y2="354.4444"/>
+    <polygon fill="#181818" points="281,324.2723,285,314.2723,289,324.2723,285,320.2723" style="stroke:#181818;stroke-width:1.0;"/>
+    <line style="stroke:#181818;stroke-width:1.0;" x1="285" x2="285" y1="276.1003" y2="354.4444"/>
+    <line style="stroke:#181818;stroke-width:1.0;" x1="285" x2="262.5" y1="276.1003" y2="276.1003"/>
+    <polygon fill="#181818" points="272.5,272.1003,262.5,276.1003,272.5,280.1003,268.5,276.1003" style="stroke:#181818;stroke-width:1.0;"/>
+    <line style="stroke:#181818;stroke-width:1.0;" x1="102.5" x2="80" y1="276.1003" y2="276.1003"/>
+    <polygon fill="#181818" points="76,310.2723,80,320.2723,84,310.2723,80,314.2723" style="stroke:#181818;stroke-width:1.0;"/>
+    <line style="stroke:#181818;stroke-width:1.0;" x1="80" x2="80" y1="276.1003" y2="366.4444"/>
+    <line style="stroke:#181818;stroke-width:1.0;" x1="80" x2="314" y1="366.4444" y2="366.4444"/>
+    <line style="stroke:#181818;stroke-width:1.0;" x1="314" x2="314" y1="175.7561" y2="366.4444"/>
+    <line style="stroke:#181818;stroke-width:1.0;" x1="314" x2="302" y1="175.7561" y2="175.7561"/>
+    <polygon fill="#181818" points="312,171.7561,302,175.7561,312,179.7561,308,175.7561" style="stroke:#181818;stroke-width:1.0;"/>
+    <line style="stroke:#181818;stroke-width:1.0;" x1="182.5" x2="182.5" y1="244.1003" y2="264.1003"/>
+    <polygon fill="#181818" points="178.5,254.1003,182.5,264.1003,186.5,254.1003,182.5,258.1003" style="stroke:#181818;stroke-width:1.0;"/>
+    <line style="stroke:#181818;stroke-width:1.0;" x1="182.5" x2="182.5" y1="187.7561" y2="207.7561"/>
+    <polygon fill="#181818" points="178.5,197.7561,182.5,207.7561,186.5,197.7561,182.5,201.7561" style="stroke:#181818;stroke-width:1.0;"/>
+    <line style="stroke:#181818;stroke-width:1.0;" x1="63" x2="51" y1="175.7561" y2="175.7561"/>
+    <polygon fill="#181818" points="47,266.6003,51,276.6003,55,266.6003,51,270.6003" style="stroke:#181818;stroke-width:1.0;"/>
+    <line style="stroke:#181818;stroke-width:1.0;" x1="51" x2="51" y1="175.7561" y2="388.4444"/>
+    <line style="stroke:#181818;stroke-width:1.0;" x1="51" x2="182.5" y1="388.4444" y2="388.4444"/>
+    <line style="stroke:#181818;stroke-width:1.0;" x1="182.5" x2="182.5" y1="388.4444" y2="408.4444"/>
+    <polygon fill="#181818" points="178.5,398.4444,182.5,408.4444,186.5,398.4444,182.5,402.4444" style="stroke:#181818;stroke-width:1.0;"/>
+    <line style="stroke:#181818;stroke-width:1.0;" x1="182.5" x2="182.5" y1="143.7561" y2="163.7561"/>
+    <polygon fill="#181818" points="178.5,153.7561,182.5,163.7561,186.5,153.7561,182.5,157.7561" style="stroke:#181818;stroke-width:1.0;"/>
+    <line style="stroke:#181818;stroke-width:1.0;" x1="182.5" x2="182.5" y1="626.2794" y2="651.7704"/>
+    <polygon fill="#181818" points="178.5,641.7704,182.5,651.7704,186.5,641.7704,182.5,645.7704" style="stroke:#181818;stroke-width:1.0;"/>
+    <line style="stroke:#181818;stroke-width:1.0;" x1="210.5" x2="266.5" y1="614.2794" y2="614.2794"/>
+    <polygon fill="#181818" points="262.5,659.9424,266.5,669.9424,270.5,659.9424,266.5,663.9424" style="stroke:#181818;stroke-width:1.0;"/>
+    <line style="stroke:#181818;stroke-width:1.0;" x1="266.5" x2="266.5" y1="614.2794" y2="720.1145"/>
+    <line style="stroke:#181818;stroke-width:1.0;" x1="266.5" x2="194.5" y1="720.1145" y2="720.1145"/>
+    <polygon fill="#181818" points="204.5,716.1145,194.5,720.1145,204.5,724.1145,200.5,720.1145" style="stroke:#181818;stroke-width:1.0;"/>
+    <line style="stroke:#181818;stroke-width:1.0;" x1="182.5" x2="182.5" y1="688.1145" y2="708.1145"/>
+    <polygon fill="#181818" points="178.5,698.1145,182.5,708.1145,186.5,698.1145,182.5,702.1145" style="stroke:#181818;stroke-width:1.0;"/>
+    <line style="stroke:#181818;stroke-width:1.0;" x1="182.5" x2="182.5" y1="582.2794" y2="602.2794"/>
+    <polygon fill="#181818" points="178.5,592.2794,182.5,602.2794,186.5,592.2794,182.5,596.2794" style="stroke:#181818;stroke-width:1.0;"/>
+    <line style="stroke:#181818;stroke-width:1.0;" x1="182.5" x2="182.5" y1="525.9353" y2="545.9353"/>
+    <polygon fill="#181818" points="178.5,535.9353,182.5,545.9353,186.5,535.9353,182.5,539.9353" style="stroke:#181818;stroke-width:1.0;"/>
+    <line style="stroke:#181818;stroke-width:1.0;" x1="182.5" x2="182.5" y1="732.1145" y2="742.1145"/>
+    <line style="stroke:#181818;stroke-width:1.0;" x1="182.5" x2="314" y1="742.1145" y2="742.1145"/>
+    <polygon fill="#181818" points="310,632.2704,314,622.2704,318,632.2704,314,628.2704" style="stroke:#181818;stroke-width:1.0;"/>
+    <line style="stroke:#181818;stroke-width:1.0;" x1="314" x2="314" y1="513.9353" y2="742.1145"/>
+    <line style="stroke:#181818;stroke-width:1.0;" x1="314" x2="302" y1="513.9353" y2="513.9353"/>
+    <polygon fill="#181818" points="312,509.9353,302,513.9353,312,517.9353,308,513.9353" style="stroke:#181818;stroke-width:1.0;"/>
+    <line style="stroke:#181818;stroke-width:1.0;" x1="63" x2="51" y1="513.9353" y2="513.9353"/>
+    <polygon fill="#181818" points="47,618.2704,51,628.2704,55,618.2704,51,622.2704" style="stroke:#181818;stroke-width:1.0;"/>
+    <line style="stroke:#181818;stroke-width:1.0;" x1="51" x2="51" y1="513.9353" y2="754.1145"/>
+    <line style="stroke:#181818;stroke-width:1.0;" x1="51" x2="182.5" y1="754.1145" y2="754.1145"/>
+    <line style="stroke:#181818;stroke-width:1.0;" x1="182.5" x2="182.5" y1="754.1145" y2="774.1145"/>
+    <polygon fill="#181818" points="178.5,764.1145,182.5,774.1145,186.5,764.1145,182.5,768.1145" style="stroke:#181818;stroke-width:1.0;"/>
+    <line style="stroke:#181818;stroke-width:1.0;" x1="182.5" x2="182.5" y1="476.4444" y2="501.9353"/>
+    <polygon fill="#181818" points="178.5,491.9353,182.5,501.9353,186.5,491.9353,182.5,495.9353" style="stroke:#181818;stroke-width:1.0;"/>
+    <line style="stroke:#181818;stroke-width:1.0;" x1="269" x2="324" y1="464.4444" y2="464.4444"/>
+    <polygon fill="#181818" points="320,612.2704,324,622.2704,328,612.2704,324,616.2704" style="stroke:#181818;stroke-width:1.0;"/>
+    <line style="stroke:#181818;stroke-width:1.0;" x1="324" x2="324" y1="464.4444" y2="786.1145"/>
+    <line style="stroke:#181818;stroke-width:1.0;" x1="324" x2="194.5" y1="786.1145" y2="786.1145"/>
+    <polygon fill="#181818" points="204.5,782.1145,194.5,786.1145,204.5,790.1145,200.5,786.1145" style="stroke:#181818;stroke-width:1.0;"/>
+    <line style="stroke:#181818;stroke-width:1.0;" x1="182.5" x2="182.5" y1="432.4444" y2="452.4444"/>
+    <polygon fill="#181818" points="178.5,442.4444,182.5,452.4444,186.5,442.4444,182.5,446.4444" style="stroke:#181818;stroke-width:1.0;"/>
+    <line style="stroke:#181818;stroke-width:1.0;" x1="182.5" x2="182.5" y1="798.1145" y2="808.1145"/>
+    <line style="stroke:#181818;stroke-width:1.0;" x1="182.5" x2="348" y1="808.1145" y2="808.1145"/>
+    <polygon fill="#181818" points="344,620.2704,348,610.2704,352,620.2704,348,616.2704" style="stroke:#181818;stroke-width:1.0;"/>
+    <line style="stroke:#181818;stroke-width:1.0;" x1="348" x2="348" y1="420.4444" y2="808.1145"/>
+    <line style="stroke:#181818;stroke-width:1.0;" x1="348" x2="248" y1="420.4444" y2="420.4444"/>
+    <polygon fill="#181818" points="258,416.4444,248,420.4444,258,424.4444,254,420.4444" style="stroke:#181818;stroke-width:1.0;"/>
+    <line style="stroke:#181818;stroke-width:1.0;" x1="117" x2="26" y1="420.4444" y2="420.4444"/>
+    <line style="stroke:#181818;stroke-width:1.0;" x1="26" x2="26" y1="420.4444" y2="452.4444"/>
+    <polygon fill="#181818" points="22,442.4444,26,452.4444,30,442.4444,26,446.4444" style="stroke:#181818;stroke-width:1.0;"/>
+    <!--SRC=[dP2nJiGm38RtFCK_jWCda1WG9o4nmu0GBn0QvnhH9Y5nXVhsE6tJa-06H2OhjZz_zflZWV0O8tc3H9yJPIQ34Da5dw67KqYE-n7D4sdS7EuErwrIzoTYTC5RTvhINex1PJvksQYJ7eafLUgIHVFo-jp2fZ12VjCivL-z4uN6XWJING_7DAuLboUq2hWiaE4yJD_5M-IeEpfAvKzwf9G5Gfwtfe8JO9noZtVTVTHHNJ043X3Xmf7xB2Yr1x_4bmunA2jAXxDeDfRBy86HHLhoYN8KMMh1FNaqC-LLuZ-NMEJ_V8toYfSDapTrldNfp1AQDliKsR_QrdOQiZYMTHO8H5OFYRIPruyAaZivgxPelTYvkLMrO4zUFPZWPKhc4DKt]-->
+  </g>
+</svg>

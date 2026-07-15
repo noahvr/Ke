@@ -1,0 +1,6 @@
+/location.hh                     -diff merge=ours
+/netconf_lexer.cc                -diff merge=ours
+/netconf_messages.cc             -diff merge=ours
+/netconf_messages.h              -diff merge=ours
+/netconf_parser.cc               -diff merge=ours
+/netconf_parser.h                -diff merge=ours

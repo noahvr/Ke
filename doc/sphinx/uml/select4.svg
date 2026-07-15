@@ -1,0 +1,345 @@
+<?xml version="1.0" encoding="us-ascii" standalone="no"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" contentStyleType="text/css" height="2308px" preserveAspectRatio="none" style="width:1429px;height:2308px;background:#FFFFFF;" version="1.1" viewBox="0 0 1429 2308" width="1429px" zoomAndPan="magnify">
+  <defs/>
+  <g>
+    <text fill="#000000" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacing" textLength="248" x="583.5" y="24.9659">DHCPv4 subnet selection (Kea 1.8.0)</text>
+    <!--cluster relayed-->
+    <g id="cluster_relayed">
+      <rect fill="none" height="391.06" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:1.0;" width="442" x="7" y="359.2779"/>
+      <text fill="#000000" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacing" textLength="54" x="201" y="376.2439">Relayed</text>
+    </g>
+    <!--cluster set_address-->
+    <g id="cluster_set_address">
+      <rect fill="none" height="172.93" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:1.0;" width="792" x="226" y="817.3379"/>
+      <text fill="#000000" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacing" textLength="157" x="543.5" y="834.3039">Set address for lookup</text>
+    </g>
+    <!--cluster interface-->
+    <g id="cluster_interface">
+      <rect fill="none" height="509.27" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:1.0;" width="392" x="919" y="1049.2679"/>
+      <text fill="#000000" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacing" textLength="156" x="1037" y="1066.2339">Try incoming interface</text>
+    </g>
+    <!--cluster address-->
+    <g id="cluster_address">
+      <rect fill="none" height="309.14" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:1.0;" width="186" x="737" y="1609.5379"/>
+      <text fill="#000000" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacing" textLength="80" x="790" y="1626.5039">Try address</text>
+    </g>
+    <!--entity relay_subnet-->
+    <g id="elem_relay_subnet">
+      <rect fill="#F1F1F1" height="39.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="226" x="170" y="451.1379"/>
+      <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="206" x="180" y="476.1039">Relay address matches subnet</text>
+    </g>
+    <!--entity relay_network-->
+    <g id="elem_relay_network">
+      <rect fill="#F1F1F1" height="39.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="284" x="141" y="569.1979"/>
+      <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="264" x="151" y="594.1639">Relay address matches shared network</text>
+    </g>
+    <!--entity relay_class-->
+    <g id="elem_relay_class">
+      <rect fill="#F1F1F1" height="39.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="138" x="113" y="687.2679"/>
+      <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="118" x="123" y="712.2339">Check client class</text>
+    </g>
+    <!--entity relay_address-->
+    <g id="elem_relay_address">
+      <rect fill="#F1F1F1" height="39.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="136" x="250" y="927.1979"/>
+      <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="116" x="260" y="952.1639">Set relay address</text>
+    </g>
+    <!--entity client_address-->
+    <g id="elem_client_address">
+      <rect fill="#F1F1F1" height="39.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="140" x="544" y="927.1979"/>
+      <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="120" x="554" y="952.1639">Set client address</text>
+    </g>
+    <!--entity source_address-->
+    <g id="elem_source_address">
+      <rect fill="#F1F1F1" height="39.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="148" x="846" y="927.1979"/>
+      <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="128" x="856" y="952.1639">Set source address</text>
+    </g>
+    <!--entity interface_subnet-->
+    <g id="elem_interface_subnet">
+      <rect fill="#F1F1F1" height="39.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="193" x="970.5" y="1087.2679"/>
+      <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="173" x="980.5" y="1112.2339">Interface matches subnet</text>
+    </g>
+    <!--entity interface_network-->
+    <g id="elem_interface_network">
+      <rect fill="#F1F1F1" height="39.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="251" x="1044.5" y="1205.3379"/>
+      <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="231" x="1054.5" y="1230.3039">Interface matches shared network</text>
+    </g>
+    <!--entity interface_class-->
+    <g id="elem_interface_class">
+      <rect fill="#F1F1F1" height="39.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="138" x="995" y="1323.3979"/>
+      <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="118" x="1005" y="1348.3639">Check client class</text>
+    </g>
+    <!--entity interface_address-->
+    <g id="elem_interface_address">
+      <rect fill="#F1F1F1" height="39.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="163" x="935.5" y="1503.4679"/>
+      <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="143" x="945.5" y="1528.4339">Set interface address</text>
+    </g>
+    <!--entity inRange-->
+    <g id="elem_inRange">
+      <rect fill="#F1F1F1" height="39.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="154" x="753" y="1647.5379"/>
+      <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="134" x="763" y="1672.5039">Check subnet prefix</text>
+    </g>
+    <!--entity address_class-->
+    <g id="elem_address_class">
+      <rect fill="#F1F1F1" height="39.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="138" x="769" y="1863.6079"/>
+      <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="118" x="779" y="1888.5739">Check client class</text>
+    </g>
+    <!--entity entry-->
+    <g id="elem_entry">
+      <rect fill="#F1F1F1" height="39.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="94" x="348" y="47.0679"/>
+      <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="74" x="358" y="72.0339">Entry point</text>
+    </g>
+    <!--entity rai_link_select-->
+    <g id="elem_rai_link_select">
+      <rect fill="#F1F1F1" height="39.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="139" x="325.5" y="147.1379"/>
+      <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="119" x="335.5" y="172.1039">Try RAI link select</text>
+    </g>
+    <!--entity subnet_select-->
+    <g id="elem_subnet_select">
+      <rect fill="#F1F1F1" height="39.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="203" x="293.5" y="247.2079"/>
+      <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="183" x="303.5" y="272.1739">Try subnet selection option</text>
+    </g>
+    <!--entity found-->
+    <g id="elem_found">
+      <rect fill="#F1F1F1" height="39.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="125" x="696.5" y="2045.6779"/>
+      <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="105" x="706.5" y="2070.6439">Found a subnet</text>
+    </g>
+    <!--entity not_found-->
+    <g id="elem_not_found">
+      <rect fill="#F1F1F1" height="39.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="134" x="856" y="2045.6779"/>
+      <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="114" x="866" y="2070.6439">Found no subnet</text>
+    </g>
+    <!--entity subnet4_select-->
+    <g id="elem_subnet4_select">
+      <rect fill="#F1F1F1" height="39.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="171" x="754.5" y="2145.7379"/>
+      <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="151" x="764.5" y="2170.7039">Callout subnet4_select</text>
+    </g>
+    <!--entity success-->
+    <g id="elem_success">
+      <rect fill="#F1F1F1" height="39.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="129" x="575.5" y="2263.8079"/>
+      <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="109" x="585.5" y="2288.7739">Return a subnet</text>
+    </g>
+    <!--entity no_subnet-->
+    <g id="elem_no_subnet">
+      <rect fill="#F1F1F1" height="39.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="138" x="771" y="2263.8079"/>
+      <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="118" x="781" y="2288.7739">Return no subnet</text>
+    </g>
+    <!--entity drop-->
+    <g id="elem_drop">
+      <rect fill="#F1F1F1" height="39.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="96" x="967" y="2263.8079"/>
+      <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="76" x="977" y="2288.7739">Drop query</text>
+    </g>
+    <!--link entry to rai_link_select-->
+    <g id="link_entry_rai_link_select">
+      <path d="M395,86.5179 C395,101.8479 395,123.5879 395,140.4079 " fill="none" id="entry-to-rai_link_select" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="395,145.3079,399,136.3079,395,140.3079,391,136.3079,395,145.3079" style="stroke:#181818;stroke-width:1.0;"/>
+    </g>
+    <!--link rai_link_select to subnet_select-->
+    <g id="link_rai_link_select_subnet_select">
+      <path d="M395,186.5779 C395,201.9079 395,223.6579 395,240.4779 " fill="none" id="rai_link_select-to-subnet_select" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="395,245.3779,399,236.3779,395,240.3779,391,236.3779,395,245.3779" style="stroke:#181818;stroke-width:1.0;"/>
+    </g>
+    <!--link subnet_select to relayed-->
+    <g id="link_subnet_select_relayed">
+      <path d="M386.56,286.6279 C379.085,303.3629 367.9325,328.3354 358.5325,349.3829 C357.3575,352.0139 356.2099,354.5835 355.1003,357.068 C354.8228,357.6891 354.5478,358.3049 354.2753,358.9151 " fill="none" id="subnet_select-to-relayed" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="354.2753,358.9151,361.5978,352.3286,356.3143,354.3497,354.2932,349.0662,354.2753,358.9151" style="stroke:#181818;stroke-width:1.0;"/>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="44" x="373" y="331.1749">relayed</text>
+    </g>
+    <!--link subnet_select to set_address-->
+    <g id="link_subnet_select_set_address">
+      <path d="M430.75,286.5979 C463.86,306.9379 508,342.6679 508,388.6379 C508,388.6379 508,388.6379 508,707.8079 C508,756.6779 465.6075,791.0879 422.5525,813.4329 C421.207,814.1312 419.8609,814.8177 418.5154,815.4925 C417.8427,815.8299 417.1701,816.1643 416.4978,816.4959 C416.1617,816.6617 415.8256,816.8267 415.4897,816.991 " fill="none" id="subnet_select-to-set_address" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="415.4897,816.991,425.3319,816.63,419.9812,814.7942,421.817,809.4435,415.4897,816.991" style="stroke:#181818;stroke-width:1.0;"/>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="68" x="509" y="535.0949">not relayed</text>
+    </g>
+    <!--link relayed to relay_subnet-->
+    <g id="link_relayed_relay_subnet">
+      <path d="M340.83,390.3679 C338.72,393.2679 316.86,423.2379 300.64,445.4879 " fill="none" id="relayed-to-relay_subnet" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="297.75,449.4479,306.2806,444.5256,300.6926,445.4055,299.8126,439.8175,297.75,449.4479" style="stroke:#181818;stroke-width:1.0;"/>
+    </g>
+    <!--link relay_subnet to relay_network-->
+    <g id="link_relay_subnet_relay_network">
+      <path d="M283,490.5779 C283,510.1379 283,540.7979 283,562.4379 " fill="none" id="relay_subnet-to-relay_network" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="283,567.3279,287,558.3279,283,562.3279,279,558.3279,283,567.3279" style="stroke:#181818;stroke-width:1.0;"/>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="57" x="284" y="535.0949">no match</text>
+    </g>
+    <!--link relay_subnet to relay_class-->
+    <g id="link_relay_subnet_relay_class">
+      <path d="M198.2,490.6879 C156.15,504.8679 109.09,528.9679 84,569.1979 C57.99,610.9179 108.63,656.8779 146.32,683.4379 " fill="none" id="relay_subnet-to-relay_class" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="150.06,686.0279,144.9432,677.6125,145.9511,683.1789,140.3848,684.1868,150.06,686.0279" style="stroke:#181818;stroke-width:1.0;"/>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="38" x="85" y="594.1349">match</text>
+    </g>
+    <!--link relay_network to set_address-->
+    <g id="link_relay_network_set_address">
+      <path d="M286.68,608.6279 C292.36,637.8379 303.67,695.9654 313.6913,747.4692 C318.7019,773.221 323.3903,797.317 326.8917,815.3143 C327.0011,815.8767 327.1094,816.4332 327.2165,816.9836 " fill="none" id="relay_network-to-set_address" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="327.2165,816.9836,329.4241,807.3853,326.2616,812.0756,321.5714,808.9131,327.2165,816.9836" style="stroke:#181818;stroke-width:1.0;"/>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="57" x="317" y="712.2049">no match</text>
+    </g>
+    <!--link relay_network to relay_class-->
+    <g id="link_relay_network_relay_class">
+      <path d="M266.55,608.6479 C249.09,628.7079 221.46,660.4579 202.57,682.1679 " fill="none" id="relay_network-to-relay_class" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="199.44,685.7679,208.3589,681.5903,202.7163,681.9909,202.3157,676.3482,199.44,685.7679" style="stroke:#181818;stroke-width:1.0;"/>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="38" x="240" y="653.1649">match</text>
+    </g>
+    <!--link relay_class to found-->
+    <g id="link_relay_class_found">
+      <path d="M178.01,726.5779 C172.7,753.1779 164,803.4179 164,846.6979 C164,846.6979 164,846.6979 164,1976.1779 C164,2028.7979 532.92,2053.1279 689.77,2061.0979 " fill="none" id="relay_class-to-found" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="694.66,2061.3479,685.8653,2056.9148,689.6659,2061.1047,685.476,2064.9053,694.66,2061.3479" style="stroke:#181818;stroke-width:1.0;"/>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="67" x="165" y="1438.3649">compatible</text>
+    </g>
+    <!--link relay_class to set_address-->
+    <g id="link_relay_class_set_address">
+      <path d="M186.01,726.6779 C190.9,745.6379 200.85,774.6479 219,793.3379 C223.795,798.2767 229.1359,802.8079 234.8159,806.9572 C237.6558,809.0318 240.5806,811.0109 243.5642,812.8978 C245.056,813.8412 246.5625,814.7615 248.0805,815.6592 C248.8395,816.108 249.6014,816.5511 250.3657,816.9887 C250.5568,817.0981 250.7481,817.2071 250.9395,817.3158 " fill="none" id="relay_class-to-set_address" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="250.9395,817.3158,245.0885,809.3933,246.5916,814.8468,241.1381,816.3499,250.9395,817.3158" style="stroke:#181818;stroke-width:1.0;"/>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="91" x="220" y="789.2349">not compatible</text>
+    </g>
+    <!--link set_address to relay_address-->
+    <g id="link_set_address_relay_address">
+      <path d="M332.96,848.4779 C332.38,852.2479 326.08,893.1779 321.85,920.7279 " fill="none" id="set_address-to-relay_address" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="321.1,925.5779,326.4166,917.2873,321.8571,920.6356,318.5088,916.076,321.1,925.5779" style="stroke:#181818;stroke-width:1.0;"/>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="122" x="329" y="893.0949">try the relay address</text>
+    </g>
+    <!--link relay_address to client_address-->
+    <g id="link_relay_address_client_address">
+      <path d="M386.28,946.7279 C431.37,946.7279 490.52,946.7279 537.24,946.7279 " fill="none" id="relay_address-to-client_address" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="542.24,946.7279,533.24,942.7279,537.24,946.7279,533.24,950.7279,542.24,946.7279" style="stroke:#181818;stroke-width:1.0;"/>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="122" x="404" y="939.6249">has no relay address</text>
+    </g>
+    <!--link client_address to source_address-->
+    <g id="link_client_address_source_address">
+      <path d="M684.2,946.7279 C730.39,946.7279 790.98,946.7279 839.17,946.7279 " fill="none" id="client_address-to-source_address" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="844.07,946.7279,835.07,942.7279,839.07,946.7279,835.07,950.7279,844.07,946.7279" style="stroke:#181818;stroke-width:1.0;"/>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="125" x="702.5" y="939.6249">has no client address</text>
+    </g>
+    <!--link source_address to interface_subnet-->
+    <g id="link_source_address_interface_subnet">
+      <path d="M937.44,966.4879 C964.41,995.4779 1016.16,1051.1279 1045.43,1082.6079 " fill="none" id="source_address-to-interface_subnet" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="1048.55,1085.9679,1045.3321,1076.6596,1045.1379,1082.3131,1039.4844,1082.119,1048.55,1085.9679" style="stroke:#181818;stroke-width:1.0;"/>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="116" x="998" y="1029.1649">no suitable address</text>
+    </g>
+    <!--link relay_address to inRange-->
+    <g id="link_relay_address_inRange">
+      <path d="M318,966.7079 C318,996.3879 318,1055.5779 318,1105.7979 C318,1105.7979 318,1105.7979 318,1524.0079 C318,1611.7779 600.91,1647.5579 746.13,1660.1479 " fill="none" id="relay_address-to-inRange" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="751.01,1660.5679,742.3868,1655.8097,746.0285,1660.1385,741.6997,1663.7801,751.01,1660.5679" style="stroke:#181818;stroke-width:1.0;"/>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="113" x="319" y="1348.3349">has a relay address</text>
+    </g>
+    <!--link client_address to inRange-->
+    <g id="link_client_address_inRange">
+      <path d="M588.81,966.6479 C556.06,993.6079 503,1046.4479 503,1105.7979 C503,1105.7979 503,1105.7979 503,1524.0079 C503,1629.9979 649.31,1657.7579 746.2,1664.5179 " fill="none" id="client_address-to-inRange" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="751,1664.8379,742.2817,1660.2564,746.0108,1664.5101,741.7571,1668.2392,751,1664.8379" style="stroke:#181818;stroke-width:1.0;"/>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="116" x="504" y="1348.3349">has a client address</text>
+    </g>
+    <!--link source_address to inRange-->
+    <g id="link_source_address_inRange">
+      <path d="M845.65,965.7379 C778.78,986.8879 691,1029.2279 691,1105.7979 C691,1105.7979 691,1105.7979 691,1524.0079 C691,1578.9879 744.85,1620.5679 785.52,1644.1279 " fill="none" id="source_address-to-inRange" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="789.59,1646.4379,783.7463,1638.51,785.2444,1643.9649,779.7895,1645.463,789.59,1646.4379" style="stroke:#181818;stroke-width:1.0;"/>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="210" x="692" y="1348.3349">has source address and use unicast</text>
+    </g>
+    <!--link interface_subnet to not_found-->
+    <g id="link_interface_subnet_not_found">
+      <path d="M1163.65,1109.3879 C1245.29,1116.4879 1349,1141.6779 1349,1223.8679 C1349,1223.8679 1349,1223.8679 1349,1976.1779 C1349,2047.3079 1118.33,2061.4179 996.47,2063.9179 " fill="none" id="interface_subnet-to-not_found" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="991.54,2064.0079,1000.6182,2067.8272,996.539,2063.9079,1000.4582,2059.8288,991.54,2064.0079" style="stroke:#181818;stroke-width:1.0;"/>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="71" x="1350" y="1589.4349">no interface</text>
+    </g>
+    <!--link interface_subnet to interface_class-->
+    <g id="link_interface_subnet_interface_class">
+      <path d="M1044.43,1126.7879 C1025,1144.7379 998.36,1173.5779 987,1205.3379 C971.83,1247.7379 1008.42,1292.3879 1036.21,1318.6679 " fill="none" id="interface_subnet-to-interface_class" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="1039.82,1322.0079,1035.9155,1312.9661,1036.1443,1318.6183,1030.4921,1318.8471,1039.82,1322.0079" style="stroke:#181818;stroke-width:1.0;"/>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="38" x="988" y="1230.2649">match</text>
+    </g>
+    <!--link interface_subnet to interface_network-->
+    <g id="link_interface_subnet_interface_network">
+      <path d="M1083.78,1126.7079 C1101.58,1146.7779 1129.76,1178.5179 1149.02,1200.2279 " fill="none" id="interface_subnet-to-interface_network" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="1152.22,1203.8379,1149.2304,1194.4538,1148.8982,1200.1009,1143.2511,1199.7687,1152.22,1203.8379" style="stroke:#181818;stroke-width:1.0;"/>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="57" x="1125" y="1171.2349">no match</text>
+    </g>
+    <!--link interface_network to interface_class-->
+    <g id="link_interface_network_interface_class">
+      <path d="M1152.73,1244.7779 C1134.41,1264.8379 1105.41,1296.5879 1085.59,1318.2979 " fill="none" id="interface_network-to-interface_class" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="1082.28,1321.9179,1091.306,1317.9769,1085.6547,1318.2286,1085.4031,1312.5773,1082.28,1321.9179" style="stroke:#181818;stroke-width:1.0;"/>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="38" x="1124" y="1289.2949">march</text>
+    </g>
+    <!--link interface_network to not_found-->
+    <g id="link_interface_network_not_found">
+      <path d="M1189.38,1244.8879 C1209.17,1266.4279 1237,1303.5479 1237,1341.9379 C1237,1341.9379 1237,1341.9379 1237,1976.1779 C1237,2025.8479 1089.48,2048.7879 996.67,2058.2979 " fill="none" id="interface_network-to-not_found" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="991.87,2058.7879,1001.2242,2061.8699,996.845,2058.289,1000.4259,2053.9098,991.87,2058.7879" style="stroke:#181818;stroke-width:1.0;"/>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="57" x="1238" y="1672.4649">no match</text>
+    </g>
+    <!--link interface_class to found-->
+    <g id="link_interface_class_found">
+      <path d="M1085.86,1362.7379 C1101.31,1377.4979 1120.83,1399.5079 1130,1423.4679 C1179.63,1553.1279 1133.94,1597.0079 1142,1735.6079 C1143,1752.7379 1145,1756.9479 1145,1774.1079 C1145,1774.1079 1145,1774.1079 1145,1976.1779 C1145,2045.9079 906.97,2030.0779 839,2045.6779 C835.44,2046.4879 831.79,2047.3279 828.1,2048.1779 " fill="none" id="interface_class-to-found" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="823.35,2049.2779,833.0206,2051.1435,828.221,2048.1494,831.215,2043.3499,823.35,2049.2779" style="stroke:#181818;stroke-width:1.0;"/>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="67" x="1143" y="1731.5049">compatible</text>
+    </g>
+    <!--link interface_class to interface_address-->
+    <g id="link_interface_class_interface_address">
+      <path d="M1055.33,1362.8379 C1048.36,1378.7179 1038.81,1402.1679 1033,1423.4679 C1026.32,1447.9579 1022.05,1476.6679 1019.61,1496.7679 " fill="none" id="interface_class-to-interface_address" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="1019.03,1501.7279,1024.0584,1493.2594,1019.6167,1496.7625,1016.1137,1492.3207,1019.03,1501.7279" style="stroke:#181818;stroke-width:1.0;"/>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="91" x="1034" y="1438.3649">not compatible</text>
+    </g>
+    <!--link interface_address to inRange-->
+    <g id="link_interface_address_inRange">
+      <path d="M935.09,1535.7079 C890.06,1543.9979 840.63,1556.8179 827,1574.5379 C812.66,1593.1879 815.9,1620.8679 821.19,1640.8979 " fill="none" id="interface_address-to-inRange" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="822.54,1645.6579,823.9213,1635.9064,821.1702,1640.8492,816.2273,1638.0981,822.54,1645.6579" style="stroke:#181818;stroke-width:1.0;"/>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="144" x="828" y="1589.4349">has an interface address</text>
+    </g>
+    <!--link interface_address to not_found-->
+    <g id="link_interface_address_not_found">
+      <path d="M1013.09,1542.7479 C1007.8,1569.8479 999,1621.5679 999,1666.0679 C999,1666.0679 999,1666.0679 999,1976.1779 C999,2003.1679 978.28,2025.9679 958.48,2041.6079 " fill="none" id="interface_address-to-not_found" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="954.68,2044.4979,964.2621,2042.2211,958.6558,2041.466,959.411,2035.8597,954.68,2044.4979" style="stroke:#181818;stroke-width:1.0;"/>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="121" x="1000" y="1829.5049">no interface address</text>
+    </g>
+    <!--link inRange to address_class-->
+    <g id="link_inRange_address_class">
+      <path d="M830.71,1687.0679 C832.15,1725.7079 835.43,1813.4579 837.06,1856.8679 " fill="none" id="inRange-to-address_class" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="837.24,1861.6779,840.9032,1852.5356,837.0544,1856.6814,832.9087,1852.8326,837.24,1861.6779" style="stroke:#181818;stroke-width:1.0;"/>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="38" x="835" y="1780.5049">match</text>
+    </g>
+    <!--link inRange to not_found-->
+    <g id="link_inRange_not_found">
+      <path d="M759.3,1687.0679 C718.42,1702.8079 675,1729.9279 675,1774.1079 C675,1774.1079 675,1774.1079 675,1976.1779 C675,1994.8679 776.34,2025.6379 849.46,2045.3979 " fill="none" id="inRange-to-not_found" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="854.1,2046.6479,846.4494,2040.4457,849.2719,2045.348,844.3696,2048.1706,854.1,2046.6479" style="stroke:#181818;stroke-width:1.0;"/>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="57" x="676" y="1888.5349">no match</text>
+    </g>
+    <!--link address_class to found-->
+    <g id="link_address_class_found">
+      <path d="M803.16,1902.9579 C753.3,1930.6979 665.77,1982.7179 649,2014.6779 C637.19,2037.1879 661.3,2049.4879 689.93,2056.1979 " fill="none" id="address_class-to-found" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="694.62,2057.2179,686.6857,2051.3829,689.7361,2056.1469,684.9721,2059.1972,694.62,2057.2179" style="stroke:#181818;stroke-width:1.0;"/>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="67" x="701" y="1980.5749">compatible</text>
+    </g>
+    <!--link address_class to not_found-->
+    <g id="link_address_class_not_found">
+      <path d="M845.19,1902.9179 C853.15,1923.2979 866.63,1956.6779 880,1984.6779 C888.98,2003.4679 900.2,2024.1479 908.93,2039.7079 " fill="none" id="address_class-to-not_found" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="911.28,2043.8779,910.3433,2034.0737,908.8239,2039.5227,903.3749,2038.0034,911.28,2043.8779" style="stroke:#181818;stroke-width:1.0;"/>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="91" x="881" y="1980.5749">not compatible</text>
+    </g>
+    <!--link found to subnet4_select-->
+    <g id="link_found_subnet4_select">
+      <path d="M774.62,2085.1179 C787.73,2100.9879 806.52,2123.7379 820.59,2140.7779 " fill="none" id="found-to-subnet4_select" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="823.47,2144.2579,820.8228,2134.7715,820.286,2140.4028,814.6546,2139.8659,823.47,2144.2579" style="stroke:#181818;stroke-width:1.0;"/>
+    </g>
+    <!--link not_found to subnet4_select-->
+    <g id="link_not_found_subnet4_select">
+      <path d="M907,2085.1179 C893.56,2100.9879 874.31,2123.7379 859.89,2140.7779 " fill="none" id="not_found-to-subnet4_select" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="856.93,2144.2679,865.7977,2139.9827,860.1604,2140.4515,859.6915,2134.8141,856.93,2144.2679" style="stroke:#181818;stroke-width:1.0;"/>
+    </g>
+    <!--link found to not_found-->
+    <!--link subnet4_select to success-->
+    <g id="link_subnet4_select_success">
+      <path d="M754.28,2174.9179 C724.09,2181.6979 691.77,2193.6879 668,2214.8079 C655.63,2225.7979 648.6,2243.1079 644.67,2257.4579 " fill="none" id="subnet4_select-to-success" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="643.55,2261.9279,649.6348,2254.1836,644.7761,2257.0806,641.8791,2252.2218,643.55,2261.9279" style="stroke:#181818;stroke-width:1.0;"/>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="158" x="669" y="2229.7049">CONTINUE and subnet set</text>
+    </g>
+    <!--link subnet4_select to no_subnet-->
+    <g id="link_subnet4_select_no_subnet">
+      <path d="M838.56,2185.1679 C837.95,2194.1379 837.3,2205.0179 837,2214.8079 C836.57,2228.7979 837.19,2244.3979 837.98,2257.0879 " fill="none" id="subnet4_select-to-no_subnet" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="838.3,2261.9179,841.6731,2252.6647,837.957,2256.9297,833.692,2253.2135,838.3,2261.9179" style="stroke:#181818;stroke-width:1.0;"/>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="133" x="838" y="2229.7049">SKIP or subnet not set</text>
+    </g>
+    <!--link subnet4_select to drop-->
+    <g id="link_subnet4_select_drop">
+      <path d="M922.26,2185.2079 C941.3,2192.2879 960.5,2201.8879 976,2214.8079 C989.56,2226.1179 999.42,2243.4179 1005.84,2257.6779 " fill="none" id="subnet4_select-to-drop" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="1007.78,2262.1879,1007.9113,2252.3399,1005.8104,2257.5922,1000.5581,2255.4913,1007.78,2262.1879" style="stroke:#181818;stroke-width:1.0;"/>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="35" x="992" y="2229.7049">DROP</text>
+    </g>
+    <!--SRC=[ZPPDRzim38Rl_XL2JziXnGRqCFHGO4WwB2ZG1cbt6eP0jPbOY2jvahmj6FRVfo_hotBJIskHpqjHf4n74ja1MdrTRdvT8J4yKv18G0Ur98oYTtU0qSVBJvSVtbSLFW2LwEAMIdv2FIDKNY0i4EYrzpuft_Rp6dM47bqWGt5CTjgsixQ4dspBUltFwApFgxZwY-b1fNonXGwVeB7HxJFwMo4NrtWHRXeEGg0NBEiMncX1ihE6SweMSnLSWRyPFqPgP_7oPGlr4TKTqQkwmq94i5bN_v8pFAfZZxlj6KSTOyUXjmTNfnvTuLXQmECaemsS9M5TBZ5iJKLQi87NaD3MvEaqVTqyGclsGkX1FKZWUro3qVbLbFpQsmhzy8Ay9mNLj1z1_SQU187jIro6a7jSYQ2OBqRCJvjdKt6tlUUm9tzSvAsA0UTITW73HNBu5pRG1k6uc7jjoW3AOe8okKkf9UuwDaW7NUsYbpSrUSKMvC1fkhCOwbhN9cFopSScZzYAinxz782V3D2ePLMPoO8MYvl9zCZMXaadHRAoCToCk1wV2apyqbth6dbsLFj8umdYHUHrrz14iHTtZZJjL5mCZUfIJhFWV3XhMsZ8z5ovrKlROqcUEyYOKX4YE7Q6JGEkEoPRI8TKbL8BheJf65BArboCJ9XHHfcEfA1CPrsLOJhPVCROUeg1IApEDfUj4PetrEs5poHP4BmbjrYHJcA4LSy60MYWfCP2LfE3cDxwTzgUoqCb_2QVWFxAd84B5tlgd8lFP-XfyddarwzmaPiCxEbjdYA5vj7f1w4eVAK3aSw6DdGoqAFwHqYnAgbkhYO5AesMLCAQmnprmpve2axd-DwIfW7w8zgXIaadDjy6jVdouVvfVV_jrbni__DFbaJ-Mw5aZtVh3L8_avn17s56fJyWIh3QFcog_m00]-->
+  </g>
+</svg>

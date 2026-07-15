@@ -1,0 +1,67 @@
+if not TESTS_OPT.enabled()
+    subdir_done()
+endif
+
+root_tests = '*EventHandlerTest.noLimit'
+
+args_filter_out = []
+if PASSWORDLESS_SUDO_SET_UP
+    args_filter_out = [f'--gtest_filter=-@root_tests@']
+endif
+
+kea_util_tests = executable(
+    'kea-util-tests',
+    'bigint_unittest.cc',
+    'boost_time_utils_unittest.cc',
+    'buffer_unittest.cc',
+    'chrono_time_utils_unittest.cc',
+    'csv_file_unittest.cc',
+    'dhcp_space_unittest.cc',
+    'doubles_unittest.cc',
+    'encode_unittest.cc',
+    'fd_event_handler_factory_unittests.cc',
+    'fd_tests.cc',
+    'filesystem_unittests.cc',
+    'hash_unittest.cc',
+    'io_unittests.cc',
+    'labeled_value_unittest.cc',
+    'memory_segment_common_unittest.cc',
+    'memory_segment_local_unittest.cc',
+    'multi_threading_mgr_unittest.cc',
+    'optional_unittest.cc',
+    'pid_file_unittest.cc',
+    'poll_event_handler_unittests.cc',
+    'range_utilities_unittest.cc',
+    'readwrite_mutex_unittest.cc',
+    'run_unittests.cc',
+    'select_event_handler_unittests.cc',
+    'staged_value_unittest.cc',
+    'state_model_unittest.cc',
+    'stopwatch_unittest.cc',
+    'str_unittests.cc',
+    'thread_pool_unittest.cc',
+    'triplet_unittest.cc',
+    'unlock_guard_unittests.cc',
+    'utf8_unittest.cc',
+    'versioned_csv_file_unittest.cc',
+    'watched_thread_unittest.cc',
+    'watch_socket_unittests.cc',
+    cpp_args: [
+        f'-DABS_SRCDIR="@TOP_SOURCE_DIR@/src/lib/util/tests"',
+        f'-DTEST_DATA_BUILDDIR="@TOP_BUILD_DIR@/src/lib/util/tests"',
+    ],
+    dependencies: [GTEST_DEP],
+    include_directories: [include_directories('.')] + INCLUDES,
+    link_with: [kea_util_unittests_lib] + LIBS_BUILT_SO_FAR,
+)
+test('kea-util-tests', kea_util_tests, protocol: 'gtest')
+
+if PASSWORDLESS_SUDO_SET_UP
+    test(
+        'sudo-kea-util-tests',
+        SUDO,
+        args: [kea_util_tests, f'--gtest_filter=@root_tests@'],
+        protocol: 'gtest',
+        suite: 'sudo-tests',
+    )
+endif

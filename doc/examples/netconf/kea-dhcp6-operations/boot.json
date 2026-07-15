@@ -1,0 +1,8 @@
+{
+    "Dhcp6": {
+        "control-socket": {
+            "socket-type": "unix",
+            "socket-name": "kea6-ctrl-socket"
+        }
+    }
+}

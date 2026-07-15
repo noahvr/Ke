@@ -1,0 +1,611 @@
+// Copyright (C) 2017-2026 Internet Systems Consortium, Inc. ("ISC")
+//
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+// Functions accessed by the hooks framework use C linkage to avoid the name
+// mangling that accompanies use of the C++ compiler as well as to avoid
+// issues related to namespaces.
+
+#include <config.h>
+
+#include <lease_cmds.h>
+#include <lease_cmds_log.h>
+#include <binding_variables.h>
+#include <cc/command_interpreter.h>
+#include <dhcpsrv/cfgmgr.h>
+#include <hooks/hooks.h>
+#include <process/daemon.h>
+#include <sflq_cmds.h>
+
+using namespace isc::config;
+using namespace isc::data;
+using namespace isc::dhcp;
+using namespace isc::hooks;
+using namespace isc::process;
+using namespace isc::lease_cmds;
+
+namespace isc {
+namespace lease_cmds {
+
+/// @brief Singleton that manages configured binding variables.
+BindingVariableMgrPtr binding_var_mgr;
+
+} // end of namespace lease_cmds
+} // end of namespace isc
+
+
+extern "C" {
+
+/// @brief This is a command callout for 'lease4-add' command.
+///
+/// @param handle Callout handle used to retrieve a command and
+/// provide a response.
+/// @return 0 if this callout has been invoked successfully,
+/// 1 otherwise.
+int lease4_add(CalloutHandle& handle) {
+    LeaseCmds lease_cmds;
+    return(lease_cmds.leaseAddHandler(handle));
+}
+
+/// @brief This is a command callout for 'lease6-add' command.
+///
+/// @param handle Callout handle used to retrieve a command and
+/// provide a response.
+/// @return 0 if this callout has been invoked successfully,
+/// 1 otherwise.
+int lease6_add(CalloutHandle& handle) {
+    LeaseCmds lease_cmds;
+    return(lease_cmds.leaseAddHandler(handle));
+}
+
+/// @brief This is a command callout for 'lease6-bulk-apply' command.
+///
+/// @param handle Callout handle used to retrieve a command and
+/// provide a response.
+/// @return 0 if this callout has been invoked successfully,
+/// 1 otherwise.
+int lease6_bulk_apply(CalloutHandle& handle) {
+    LeaseCmds lease_cmds;
+    return (lease_cmds.lease6BulkApplyHandler(handle));
+}
+
+/// @brief This is a command callout for 'lease4-get' command.
+///
+/// @param handle Callout handle used to retrieve a command and
+/// provide a response.
+/// @return 0 if this callout has been invoked successfully,
+/// 1 otherwise.
+int lease4_get(CalloutHandle& handle) {
+    LeaseCmds lease_cmds;
+    return(lease_cmds.leaseGetHandler(handle));
+}
+
+/// @brief This is a command callout for 'lease6-get' command.
+///
+/// @param handle Callout handle used to retrieve a command and
+/// provide a response.
+/// @return 0 if this callout has been invoked successfully,
+/// 1 otherwise.
+int lease6_get(CalloutHandle& handle) {
+    LeaseCmds lease_cmds;
+    return(lease_cmds.leaseGetHandler(handle));
+}
+
+/// @brief This is a command callout for 'lease4-get-all' command.
+///
+/// @param handle Callout handle used to retrieve a command and
+/// provide a response.
+/// @return 0 if this callout has been invoked successfully,
+/// 1 if an error occurs, 3 if no leases are returned.
+int lease4_get_all(CalloutHandle& handle) {
+    LeaseCmds lease_cmds;
+    return (lease_cmds.leaseGetAllHandler(handle));
+}
+
+/// @brief This is a command callout for 'lease6-get-all' command.
+///
+/// @param handle Callout handle used to retrieve a command and
+/// provide a response.
+/// @return 0 if this callout has been invoked successfully,
+/// 1 if an error occurs, 3 if no leases are returned.
+int lease6_get_all(CalloutHandle& handle) {
+    LeaseCmds lease_cmds;
+    return (lease_cmds.leaseGetAllHandler(handle));
+}
+
+/// @brief This is a command callout for 'lease4-get-page' command.
+///
+/// @param handle Callout handle used to retrieve a command and
+/// provide a response.
+/// @return 0 if this callout has been invoked successfully,
+/// 1 if an error occurs, 3 if no leases are returned.
+int lease4_get_page(CalloutHandle& handle) {
+    LeaseCmds lease_cmds;
+    return (lease_cmds.leaseGetPageHandler(handle));
+}
+
+/// @brief This is a command callout for 'lease6-get-page' command.
+///
+/// @param handle Callout handle used to retrieve a command and
+/// provide a response.
+/// @return 0 if this callout has been invoked successfully,
+/// 1 if an error occurs, 3 if no leases are returned.
+int lease6_get_page(CalloutHandle& handle) {
+    LeaseCmds lease_cmds;
+    return (lease_cmds.leaseGetPageHandler(handle));
+}
+
+/// @brief This is a command callout for 'lease4-get-by-hw-address' command.
+///
+/// @param handle Callout handle used to retrieve a command and
+/// provide a response.
+/// @return 0 if this callout has been invoked successfully,
+/// 1 if an error occurs, 3 if no leases are returned.
+int lease4_get_by_hw_address(CalloutHandle& handle) {
+    LeaseCmds lease_cmds;
+    return (lease_cmds.leaseGetByHwAddressHandler(handle));
+}
+
+/// @brief This is a command callout for 'lease6-get-by-hw-address' command.
+///
+/// @param handle Callout handle used to retrieve a command and
+/// provide a response.
+/// @return 0 if this callout has been invoked successfully,
+/// 1 if an error occurs, 3 if no leases are returned.
+int lease6_get_by_hw_address(CalloutHandle& handle) {
+    LeaseCmds lease_cmds;
+    return (lease_cmds.leaseGetByHwAddressHandler(handle));
+}
+
+/// @brief This is a command callout for 'lease4-get-by-client-id' command.
+///
+/// @param handle Callout handle used to retrieve a command and
+/// provide a response.
+/// @return 0 if this callout has been invoked successfully,
+/// 1 if an error occurs, 3 if no leases are returned.
+int lease4_get_by_client_id(CalloutHandle& handle) {
+    LeaseCmds lease_cmds;
+    return (lease_cmds.leaseGetByClientIdHandler(handle));
+}
+
+/// @brief This is a command callout for 'lease6-get-by-duid' command.
+///
+/// @param handle Callout handle used to retrieve a command and
+/// provide a response.
+/// @return 0 if this callout has been invoked successfully,
+/// 1 if an error occurs, 3 if no leases are returned.
+int lease6_get_by_duid(CalloutHandle& handle) {
+    LeaseCmds lease_cmds;
+    return (lease_cmds.leaseGetByDuidHandler(handle));
+}
+
+/// @brief This is a command callout for 'lease4-get-by-state' command.
+///
+/// @param handle Callout handle used to retrieve a command and
+/// provide a response.
+/// @return 0 if this callout has been invoked successfully,
+/// 1 if an error occurs, 3 if no leases are returned.
+int lease4_get_by_state(CalloutHandle& handle) {
+    LeaseCmds lease_cmds;
+    return (lease_cmds.leaseGetByStateHandler(handle));
+}
+
+/// @brief This is a command callout for 'lease6-get-by-state' command.
+///
+/// @param handle Callout handle used to retrieve a command and
+/// provide a response.
+/// @return 0 if this callout has been invoked successfully,
+/// 1 if an error occurs, 3 if no leases are returned.
+int lease6_get_by_state(CalloutHandle& handle) {
+    LeaseCmds lease_cmds;
+    return (lease_cmds.leaseGetByStateHandler(handle));
+}
+
+/// @brief This is a command callout for 'lease4-get-by-hostname' command.
+///
+/// @param handle Callout handle used to retrieve a command and
+/// provide a response.
+/// @return 0 if this callout has been invoked successfully,
+/// 1 if an error occurs, 3 if no leases are returned.
+int lease4_get_by_hostname(CalloutHandle& handle) {
+    LeaseCmds lease_cmds;
+    return (lease_cmds.leaseGetByHostnameHandler(handle));
+}
+
+/// @brief This is a command callout for 'lease6-get-by-hostname' command.
+///
+/// @param handle Callout handle used to retrieve a command and
+/// provide a response.
+/// @return 0 if this callout has been invoked successfully,
+/// 1 if an error occurs, 3 if no leases are returned.
+int lease6_get_by_hostname(CalloutHandle& handle) {
+    LeaseCmds lease_cmds;
+    return (lease_cmds.leaseGetByHostnameHandler(handle));
+}
+
+/// @brief This is a command callout for 'lease4-del' command.
+///
+/// @param handle Callout handle used to retrieve a command and
+/// provide a response.
+/// @return 0 if this callout has been invoked successfully,
+/// 1 otherwise.
+int lease4_del(CalloutHandle& handle) {
+    LeaseCmds lease_cmds;
+    return(lease_cmds.lease4DelHandler(handle));
+}
+
+/// @brief This is a command callout for 'lease6-del' command.
+///
+/// @param handle Callout handle used to retrieve a command and
+/// provide a response.
+/// @return 0 if this callout has been invoked successfully,
+/// 1 otherwise.
+int lease6_del(CalloutHandle& handle) {
+    LeaseCmds lease_cmds;
+    return(lease_cmds.lease6DelHandler(handle));
+}
+
+/// @brief This is a command callout for 'lease4-update' command.
+///
+/// @param handle Callout handle used to retrieve a command and
+/// provide a response.
+/// @return 0 if this callout has been invoked successfully,
+/// 1 otherwise.
+int lease4_update(CalloutHandle& handle) {
+    LeaseCmds lease_cmds;
+    return(lease_cmds.lease4UpdateHandler(handle));
+}
+
+/// @brief This is a command callout for 'lease6-update' command.
+///
+/// @param handle Callout handle used to retrieve a command and
+/// provide a response.
+/// @return 0 if this callout has been invoked successfully,
+/// 1 otherwise.
+int lease6_update(CalloutHandle& handle) {
+    LeaseCmds lease_cmds;
+    return(lease_cmds.lease6UpdateHandler(handle));
+}
+
+/// @brief This is a command callout for 'lease4-wipe' command.
+///
+/// @param handle Callout handle used to retrieve a command and
+/// provide a response.
+/// @return 0 if this callout has been invoked successfully,
+/// 1 otherwise.
+int lease4_wipe(CalloutHandle& handle) {
+    LeaseCmds lease_cmds;
+    return(lease_cmds.lease4WipeHandler(handle));
+}
+
+/// @brief This is a command callout for 'lease6-wipe' command.
+///
+/// @param handle Callout handle used to retrieve a command and
+/// provide a response.
+/// @return 0 if this callout has been invoked successfully,
+/// 1 otherwise.
+int lease6_wipe(CalloutHandle& handle) {
+    LeaseCmds lease_cmds;
+    return(lease_cmds.lease6WipeHandler(handle));
+}
+
+/// @brief This is a command callout for 'lease4-resend-ddns' command.
+///
+/// @param handle Callout handle used to retrieve a command and
+/// provide a response.
+/// @return 0 if this callout has been invoked successfully,
+/// 1 otherwise.
+int lease4_resend_ddns(CalloutHandle& handle) {
+    LeaseCmds lease_cmds;
+    return(lease_cmds.lease4ResendDdnsHandler(handle));
+}
+
+/// @brief This is a command callout for 'lease6-resend-ddns' command.
+///
+/// @param handle Callout handle used to retrieve a command and
+/// provide a response.
+/// @return 0 if this callout has been invoked successfully,
+/// 1 otherwise.
+int lease6_resend_ddns(CalloutHandle& handle) {
+    LeaseCmds lease_cmds;
+    return(lease_cmds.lease6ResendDdnsHandler(handle));
+}
+
+/// @brief This is a command callout for 'lease4-write' command.
+///
+/// @param handle Callout handle used to retrieve a command and
+/// provide a response.
+/// @return 0 if this callout has been invoked successfully,
+/// 1 otherwise.
+int lease4_write(CalloutHandle& handle) {
+    LeaseCmds lease_cmds;
+    return(lease_cmds.leaseWriteHandler(handle));
+}
+
+/// @brief This is a command callout for 'lease6-write' command.
+///
+/// @param handle Callout handle used to retrieve a command and
+/// provide a response.
+/// @return 0 if this callout has been invoked successfully,
+/// 1 otherwise.
+int lease6_write(CalloutHandle& handle) {
+    LeaseCmds lease_cmds;
+    return(lease_cmds.leaseWriteHandler(handle));
+}
+
+/// @brief This is a command callout for 'sflq-pool4-rebuild' command.
+///
+/// @param handle Callout handle used to retrieve a command and
+/// provide a response.
+/// @return 0 if this callout has been invoked successfully,
+/// 1 otherwise.
+int sflq_pool4_rebuild(CalloutHandle& handle) {
+    SflqCmds sflq_cmds;
+    return(sflq_cmds.sflqPool4RebuildHandler(handle));
+}
+
+/// @brief This is a command callout for 'sflq-pool4-get-all' command.
+///
+/// @param handle Callout handle used to retrieve a command and
+/// provide a response.
+/// @return 0 if this callout has been invoked successfully,
+/// 1 otherwise.
+int sflq_pool4_get_all(CalloutHandle& handle) {
+    SflqCmds sflq_cmds;
+    return(sflq_cmds.sflqPool4GetAllHandler(handle));
+}
+
+/// @brief This is a command callout for 'sflq-pool4-get-by-subnet' command.
+///
+/// @param handle Callout handle used to retrieve a command and
+/// provide a response.
+/// @return 0 if this callout has been invoked successfully,
+/// 1 otherwise.
+int sflq_pool4_get_by_subnet(CalloutHandle& handle) {
+    SflqCmds sflq_cmds;
+    return(sflq_cmds.sflqPool4GetBySubnetHandler(handle));
+}
+
+/// @brief This is a command callout for 'sflq-pool4-get-by-range' command.
+///
+/// @param handle Callout handle used to retrieve a command and
+/// provide a response.
+/// @return 0 if this callout has been invoked successfully,
+/// 1 otherwise.
+int sflq_pool4_get_by_range(CalloutHandle& handle) {
+    SflqCmds sflq_cmds;
+    return(sflq_cmds.sflqPool4GetByRangeHandler(handle));
+}
+
+/// @brief This is a command callout for 'sflq-pool4-del' command.
+///
+/// @param handle Callout handle used to retrieve a command and
+/// provide a response.
+/// @return 0 if this callout has been invoked successfully,
+/// 1 otherwise.
+int sflq_pool4_del(CalloutHandle& handle) {
+    SflqCmds sflq_cmds;
+    return(sflq_cmds.sflqPool4DelHandler(handle));
+}
+
+/// @brief This is a command callout for 'sflq-pool6-rebuild' command.
+///
+/// @param handle Callout handle used to retrieve a command and
+/// provide a response.
+/// @return 0 if this callout has been invoked successfully,
+/// 1 otherwise.
+int sflq_pool6_rebuild(CalloutHandle& handle) {
+    SflqCmds sflq_cmds;
+    return(sflq_cmds.sflqPool6RebuildHandler(handle));
+}
+
+/// @brief This is a command callout for 'sflq-pool6-get-all' command.
+///
+/// @param handle Callout handle used to retrieve a command and
+/// provide a response.
+/// @return 0 if this callout has been invoked successfully,
+/// 1 otherwise.
+int sflq_pool6_get_all(CalloutHandle& handle) {
+    SflqCmds sflq_cmds;
+    return(sflq_cmds.sflqPool6GetAllHandler(handle));
+}
+
+/// @brief This is a command callout for 'sflq-pool6-get-by-subnet' command.
+///
+/// @param handle Callout handle used to retrieve a command and
+/// provide a response.
+/// @return 0 if this callout has been invoked successfully,
+/// 1 otherwise.
+int sflq_pool6_get_by_subnet(CalloutHandle& handle) {
+    SflqCmds sflq_cmds;
+    return(sflq_cmds.sflqPool6GetBySubnetHandler(handle));
+}
+
+/// @brief This is a command callout for 'sflq-pool6-get-by-range' command.
+///
+/// @param handle Callout handle used to retrieve a command and
+/// provide a response.
+/// @return 0 if this callout has been invoked successfully,
+/// 1 otherwise.
+int sflq_pool6_get_by_range(CalloutHandle& handle) {
+    SflqCmds sflq_cmds;
+    return(sflq_cmds.sflqPool6GetByRangeHandler(handle));
+}
+
+/// @brief This is a command callout for 'sflq-pool6-del' command.
+///
+/// @param handle Callout handle used to retrieve a command and
+/// provide a response.
+/// @return 0 if this callout has been invoked successfully,
+/// 1 otherwise.
+int sflq_pool6_del(CalloutHandle& handle) {
+    SflqCmds sflq_cmds;
+    return(sflq_cmds.sflqPool6DelHandler(handle));
+}
+
+/// @brief This function is called when the library is loaded.
+///
+/// @param handle library handle
+/// @return 0 when initialization is successful, 1 otherwise
+int load(LibraryHandle& handle) {
+    // Make the hook library not loadable by d2.
+    uint16_t family = CfgMgr::instance().getFamily();
+    const std::string& proc_name = Daemon::getProcName();
+    if (family == AF_INET) {
+        if (proc_name != "kea-dhcp4") {
+            isc_throw(isc::Unexpected, "Bad process name: " << proc_name
+                      << ", expected kea-dhcp4");
+        }
+    } else {
+        if (proc_name != "kea-dhcp6") {
+            isc_throw(isc::Unexpected, "Bad process name: " << proc_name
+                      << ", expected kea-dhcp6");
+        }
+    }
+
+    handle.registerCommandCallout("lease4-add", lease4_add);
+    handle.registerCommandCallout("lease6-add", lease6_add);
+    handle.registerCommandCallout("lease6-bulk-apply", lease6_bulk_apply);
+    handle.registerCommandCallout("lease4-get", lease4_get);
+    handle.registerCommandCallout("lease6-get", lease6_get);
+    handle.registerCommandCallout("lease4-get-all", lease4_get_all);
+    handle.registerCommandCallout("lease6-get-all", lease6_get_all);
+    handle.registerCommandCallout("lease4-get-page", lease4_get_page);
+    handle.registerCommandCallout("lease6-get-page", lease6_get_page);
+    handle.registerCommandCallout("lease4-get-by-hw-address",
+                                  lease4_get_by_hw_address);
+    handle.registerCommandCallout("lease6-get-by-hw-address",
+                                  lease6_get_by_hw_address);
+    handle.registerCommandCallout("lease4-get-by-client-id",
+                                  lease4_get_by_client_id);
+    handle.registerCommandCallout("lease6-get-by-duid", lease6_get_by_duid);
+    handle.registerCommandCallout("lease4-get-by-state", lease4_get_by_state);
+    handle.registerCommandCallout("lease6-get-by-state", lease6_get_by_state);
+    handle.registerCommandCallout("lease4-get-by-hostname",
+                                  lease4_get_by_hostname);
+    handle.registerCommandCallout("lease6-get-by-hostname",
+                                  lease6_get_by_hostname);
+    handle.registerCommandCallout("lease4-del", lease4_del);
+    handle.registerCommandCallout("lease6-del", lease6_del);
+    handle.registerCommandCallout("lease4-update", lease4_update);
+    handle.registerCommandCallout("lease6-update", lease6_update);
+    handle.registerCommandCallout("lease4-wipe", lease4_wipe);
+    handle.registerCommandCallout("lease6-wipe", lease6_wipe);
+    handle.registerCommandCallout("lease4-resend-ddns", lease4_resend_ddns);
+    handle.registerCommandCallout("lease6-resend-ddns", lease6_resend_ddns);
+    handle.registerCommandCallout("lease4-write", lease4_write);
+    handle.registerCommandCallout("lease6-write", lease6_write);
+    handle.registerCommandCallout("sflq-pool4-rebuild", sflq_pool4_rebuild);
+    handle.registerCommandCallout("sflq-pool4-get-all", sflq_pool4_get_all);
+    handle.registerCommandCallout("sflq-pool4-get-by-subnet", sflq_pool4_get_by_subnet);
+    handle.registerCommandCallout("sflq-pool4-get-by-range", sflq_pool4_get_by_range);
+    handle.registerCommandCallout("sflq-pool4-del", sflq_pool4_del);
+    handle.registerCommandCallout("sflq-pool6-rebuild", sflq_pool6_rebuild);
+    handle.registerCommandCallout("sflq-pool6-get-all", sflq_pool6_get_all);
+    handle.registerCommandCallout("sflq-pool6-get-by-subnet", sflq_pool6_get_by_subnet);
+    handle.registerCommandCallout("sflq-pool6-get-by-range", sflq_pool6_get_by_range);
+    handle.registerCommandCallout("sflq-pool6-del", sflq_pool6_del);
+
+    // Instantiate the binding-variables manager singleton.
+    binding_var_mgr.reset(new BindingVariableMgr(family));
+
+    try {
+        // Configure binding variable manager using the hook library's parameters.
+        ConstElementPtr json = handle.getParameters();
+        if (json) {
+            binding_var_mgr->configure(json);
+        }
+    } catch (const std::exception& ex) {
+        LOG_ERROR(lease_cmds_logger, LEASE_CMDS_LOAD_ERROR)
+            .arg(ex.what());
+        return (1);
+    }
+
+    LOG_INFO(lease_cmds_logger, LEASE_CMDS_INIT_OK);
+    return (0);
+}
+
+/// @brief This function is called when the library is unloaded.
+///
+/// @return 0 if deregistration was successful, 1 otherwise
+int unload() {
+    LOG_INFO(lease_cmds_logger, LEASE_CMDS_DEINIT_OK);
+    return (0);
+}
+
+/// @brief This function is called to retrieve the multi-threading compatibility.
+///
+/// @return 1 which means compatible with multi-threading.
+int multi_threading_compatible() {
+    return (1);
+}
+
+/// @brief lease4_offer callout implementation.
+///
+/// @param handle callout handle.
+int lease4_offer(CalloutHandle& handle) {
+    CalloutHandle::CalloutNextStep status = handle.getStatus();
+    if (status == CalloutHandle::NEXT_STEP_DROP ||
+        status == CalloutHandle::NEXT_STEP_SKIP) {
+        return (0);
+    }
+
+    try {
+        LeaseCmds lease_cmds;
+        lease_cmds.lease4Offer(handle, binding_var_mgr);
+    } catch (const std::exception& ex) {
+        LOG_ERROR(lease_cmds_logger, LEASE_CMDS_LEASE4_OFFER_FAILED)
+            .arg(ex.what());
+        return (1);
+    }
+
+    return (0);
+}
+
+/// @brief leases4_committed callout implementation.
+///
+/// @param handle callout handle.
+int leases4_committed(CalloutHandle& handle) {
+    CalloutHandle::CalloutNextStep status = handle.getStatus();
+    if (status == CalloutHandle::NEXT_STEP_DROP ||
+        status == CalloutHandle::NEXT_STEP_SKIP) {
+        return (0);
+    }
+
+    try {
+        LeaseCmds lease_cmds;
+        lease_cmds.leases4Committed(handle, binding_var_mgr);
+    } catch (const std::exception& ex) {
+        LOG_ERROR(lease_cmds_logger, LEASE_CMDS_LEASES4_COMMITTED_FAILED)
+            .arg(ex.what());
+        return (1);
+    }
+
+    return (0);
+}
+
+/// @brief leases6_committed callout implementation.
+///
+/// @param handle callout handle.
+int leases6_committed(CalloutHandle& handle) {
+    CalloutHandle::CalloutNextStep status = handle.getStatus();
+    if (status == CalloutHandle::NEXT_STEP_DROP ||
+        status == CalloutHandle::NEXT_STEP_SKIP) {
+        return (0);
+    }
+
+    try {
+        LeaseCmds lease_cmds;
+        lease_cmds.leases6Committed(handle, binding_var_mgr);
+    } catch (const std::exception& ex) {
+        LOG_ERROR(lease_cmds_logger, LEASE_CMDS_LEASES6_COMMITTED_FAILED)
+            .arg(ex.what());
+        return (1);
+    }
+
+    return (0);
+}
+
+} // end extern "C"

@@ -1,0 +1,8 @@
+#!/bin/sh
+
+set -eu
+
+cd '@srcdir@'
+
+(cat Doxyfile; echo OUTPUT_DIRECTORY = @builddir@/html; echo PROJECT_NUMBER = @PACKAGE_VERSION@) | doxygen - > '@builddir@/doxygen.log' 2> '@builddir@/doxygen-error.log'
+echo "$(grep -c ': warning:' '@builddir@/doxygen-error.log')" warnings/errors detected.

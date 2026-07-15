@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="us-ascii" standalone="no"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" contentStyleType="text/css" height="883px" preserveAspectRatio="none" style="width:498px;height:883px;background:#FFFFFF;" version="1.1" viewBox="0 0 498 883" width="498px" zoomAndPan="magnify">
+  <defs/>
+  <g>
+    <text fill="#000000" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacing" textLength="235" x="124.5" y="24.9659">DHCP server main loop (Kea 1.8.0)</text>
+    <!--cluster Main Loop-->
+    <g id="cluster_Main Loop">
+      <rect fill="none" height="809.48" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:1.0;" width="485" x="7" y="47.0679"/>
+      <text fill="#000000" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacing" textLength="73" x="213" y="64.0339">Main Loop</text>
+    </g>
+    <!--cluster run_one-->
+    <g id="cluster_run_one">
+      <rect fill="none" height="451.13" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:1.0;" width="395" x="65" y="154.2779"/>
+      <text fill="#000000" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacing" textLength="78" x="223.5" y="171.2439">Event Loop</text>
+    </g>
+    <!--entity run-->
+    <g id="elem_run">
+      <rect fill="#F1F1F1" height="39.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="147" x="113.5" y="85.0679"/>
+      <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="127" x="123.5" y="110.0339">Wait for next event</text>
+    </g>
+    <!--entity poll-->
+    <g id="elem_poll">
+      <rect fill="#F1F1F1" height="39.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="93" x="108.5" y="641.4079"/>
+      <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="73" x="118.5" y="666.3739">I/O Service</text>
+    </g>
+    <!--entity ready-->
+    <g id="elem_ready">
+      <rect fill="#F1F1F1" height="39.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="171" x="236.5" y="641.4079"/>
+      <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="151" x="246.5" y="666.3739">Execute ready handler</text>
+    </g>
+    <!--entity shutdown-->
+    <g id="elem_shutdown">
+      <rect fill="#F1F1F1" height="39.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="132" x="56" y="801.4779"/>
+      <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="112" x="66" y="826.4439">Check Shutdown</text>
+    </g>
+    <!--entity signal-->
+    <g id="elem_signal">
+      <rect fill="#F1F1F1" height="39.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="62" x="246" y="245.1379"/>
+      <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="42" x="256" y="270.1039">Signal</text>
+    </g>
+    <!--entity handleSignal-->
+    <g id="elem_handleSignal">
+      <rect fill="#F1F1F1" height="39.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="114" x="97" y="245.1379"/>
+      <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="94" x="107" y="270.1039">Handle Signal</text>
+    </g>
+    <!--entity external_socket-->
+    <g id="elem_external_socket">
+      <rect fill="#F1F1F1" height="39.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="122" x="97" y="344.2079"/>
+      <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="102" x="107" y="369.1739">External Socket</text>
+    </g>
+    <!--entity handleExternalSocket-->
+    <g id="elem_handleExternalSocket">
+      <rect fill="#F1F1F1" height="39.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="174" x="254" y="344.2079"/>
+      <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="154" x="264" y="369.1739">Handle External Socket</text>
+    </g>
+    <!--entity query-->
+    <g id="elem_query">
+      <rect fill="#F1F1F1" height="39.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="102" x="248" y="443.2779"/>
+      <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="82" x="258" y="468.2439">DHCP Query</text>
+    </g>
+    <!--entity processQuery-->
+    <g id="elem_processQuery">
+      <rect fill="#F1F1F1" height="39.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="116" x="97" y="443.2779"/>
+      <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="96" x="107" y="468.2439">Process Query</text>
+    </g>
+    <!--entity timeout-->
+    <g id="elem_timeout">
+      <rect fill="#F1F1F1" height="39.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="75" x="226.5" y="542.3479"/>
+      <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="55" x="236.5" y="567.3139">Timeout</text>
+    </g>
+    <!--link run to run_one-->
+    <g id="link_run_run_one">
+      <path d="M232,124.3879 C232,129.8504 232,135.9954 232,142.2182 C232,145.3296 232,148.4605 232,151.5352 C232,152.3039 232,153.0691 232,153.8296 C232,153.9246 232,154.0196 232,154.1145 " fill="none" id="run-to-run_one" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="232,154.1145,236,145.1145,232,149.1145,228,145.1145,232,154.1145" style="stroke:#181818;stroke-width:1.0;"/>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="87" x="144" y="150.0849">get next event</text>
+    </g>
+    <!--link run_one to signal-->
+    <g id="link_run_one_signal">
+      <path d="M232.06,185.5479 C233.31,185.5479 253.25,185.5479 253.25,185.5479 C253.25,185.5479 253.25,238.1979 253.25,238.1979 " fill="none" id="run_one-to-signal" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="253.25,243.1979,257.25,234.1979,253.25,238.1979,249.25,234.1979,253.25,243.1979" style="stroke:#181818;stroke-width:1.0;"/>
+    </g>
+    <!--link signal to handleSignal-->
+    <g id="link_signal_handleSignal">
+      <path d="M245.64,258.5479 C245.64,258.5479 217.64,258.5479 217.64,258.5479 " fill="none" id="signal-to-handleSignal" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="212.64,258.5479,221.64,262.5479,217.64,258.5479,221.64,254.5479,212.64,258.5479" style="stroke:#181818;stroke-width:1.0;"/>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="59" x="186.89" y="273.4449">got signal</text>
+    </g>
+    <!--link handleSignal to poll-->
+    <g id="link_handleSignal_poll">
+      <path d="M96.86,265.5479 C85.25,265.5479 76.5,265.5479 76.5,265.5479 C76.5,265.5479 76.5,661.5479 76.5,661.5479 C76.5,661.5479 101.92,661.5479 101.92,661.5479 " fill="none" id="handleSignal-to-poll" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="106.92,661.5479,97.92,657.5479,101.92,661.5479,97.92,665.5479,106.92,661.5479" style="stroke:#181818;stroke-width:1.0;"/>
+    </g>
+    <!--link signal to external_socket-->
+    <g id="link_signal_external_socket">
+      <path d="M245.64,271.5479 C230.26,271.5479 215,271.5479 215,271.5479 C215,271.5479 215,337.2279 215,337.2279 " fill="none" id="signal-to-external_socket" style="stroke:#181818;stroke-width:1.0;stroke-dasharray:7.0,7.0;"/>
+      <polygon fill="#181818" points="215,342.2279,219,333.2279,215,337.2279,211,333.2279,215,342.2279" style="stroke:#181818;stroke-width:1.0;"/>
+    </g>
+    <!--link external_socket to handleExternalSocket-->
+    <g id="link_external_socket_handleExternalSocket">
+      <path d="M219.45,354.5479 C219.45,354.5479 247.17,354.5479 247.17,354.5479 " fill="none" id="external_socket-to-handleExternalSocket" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="252.17,354.5479,243.17,350.5479,247.17,354.5479,243.17,358.5479,252.17,354.5479" style="stroke:#181818;stroke-width:1.0;"/>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="128" x="234.31" y="350.4449">external socket ready</text>
+    </g>
+    <!--link handleExternalSocket to poll-->
+    <g id="link_handleExternalSocket_poll">
+      <path d="M253.51,373.5479 C235.94,373.5479 222.75,373.5479 222.75,373.5479 C222.75,373.5479 222.75,651.5479 222.75,651.5479 C222.75,651.5479 208.2,651.5479 208.2,651.5479 " fill="none" id="handleExternalSocket-to-poll" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="203.2,651.5479,212.2,655.5479,208.2,651.5479,212.2,647.5479,203.2,651.5479" style="stroke:#181818;stroke-width:1.0;"/>
+    </g>
+    <!--link external_socket to query-->
+    <g id="link_external_socket_query">
+      <path d="M219.4,364.5479 C222.66,364.5479 224.62,364.5479 224.62,364.5479 C224.62,364.5479 224.62,456.5479 224.62,456.5479 C224.62,456.5479 241.24,456.5479 241.24,456.5479 " fill="none" id="external_socket-to-query" style="stroke:#181818;stroke-width:1.0;stroke-dasharray:7.0,7.0;"/>
+      <polygon fill="#181818" points="246.24,456.5479,237.24,452.5479,241.24,456.5479,237.24,460.5479,246.24,456.5479" style="stroke:#181818;stroke-width:1.0;"/>
+    </g>
+    <!--link query to processQuery-->
+    <g id="link_query_processQuery">
+      <path d="M247.83,469.5479 C247.83,469.5479 219.89,469.5479 219.89,469.5479 " fill="none" id="query-to-processQuery" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="214.89,469.5479,223.89,473.5479,219.89,469.5479,223.89,465.5479,214.89,469.5479" style="stroke:#181818;stroke-width:1.0;"/>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="114" x="176.86" y="484.4449">DHCP socket ready</text>
+    </g>
+    <!--link processQuery to poll-->
+    <g id="link_processQuery_poll">
+      <path d="M155,482.5279 C155,482.5279 155,634.4979 155,634.4979 " fill="none" id="processQuery-to-poll" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="155,639.4979,159,630.4979,155,634.4979,151,630.4979,155,639.4979" style="stroke:#181818;stroke-width:1.0;"/>
+    </g>
+    <!--link query to timeout-->
+    <g id="link_query_timeout">
+      <path d="M274.75,482.3779 C274.75,482.3779 274.75,535.4979 274.75,535.4979 " fill="none" id="query-to-timeout" style="stroke:#181818;stroke-width:1.0;stroke-dasharray:7.0,7.0;"/>
+      <polygon fill="#181818" points="274.75,540.4979,278.75,531.4979,274.75,535.4979,270.75,531.4979,274.75,540.4979" style="stroke:#181818;stroke-width:1.0;"/>
+    </g>
+    <!--link timeout to poll-->
+    <g id="link_timeout_poll">
+      <path d="M229.83,581.5679 C229.83,610.6179 229.83,661.5479 229.83,661.5479 C229.83,661.5479 208.48,661.5479 208.48,661.5479 " fill="none" id="timeout-to-poll" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="203.48,661.5479,212.48,665.5479,208.48,661.5479,212.48,657.5479,203.48,661.5479" style="stroke:#181818;stroke-width:1.0;"/>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="96" x="132.83" y="628.1349">timeout expired</text>
+    </g>
+    <!--link poll to ready-->
+    <g id="link_poll_ready">
+      <path d="M201.96,671.5479 C201.96,671.5479 229.64,671.5479 229.64,671.5479 " fill="none" id="poll-to-ready" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="234.64,671.5479,225.64,667.5479,229.64,671.5479,225.64,675.5479,234.64,671.5479" style="stroke:#181818;stroke-width:1.0;"/>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="83" x="174.3" y="686.4449">handler ready</text>
+    </g>
+    <!--link poll to shutdown-->
+    <g id="link_poll_shutdown">
+      <path d="M148.25,680.8979 C148.25,680.8979 148.25,794.5479 148.25,794.5479 " fill="none" id="poll-to-shutdown" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="148.25,799.5479,152.25,790.5479,148.25,794.5479,144.25,790.5479,148.25,799.5479" style="stroke:#181818;stroke-width:1.0;"/>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="102" x="45.25" y="733.6249">no ready handler</text>
+    </g>
+    <!--link ready to ready-->
+    <g id="link_ready_ready">
+      <path d="M269,641.1379 C269,627.3979 269,611.5479 269,611.5479 C269,611.5479 233.17,611.5479 233.17,611.5479 C233.17,611.5479 233.17,741.5479 233.17,741.5479 C233.17,741.5479 322,741.5479 322,741.5479 C322,741.5479 322,687.3879 322,687.3879 " fill="none" id="ready-to-ready" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="322,682.3879,318,691.3879,322,687.3879,326,691.3879,322,682.3879" style="stroke:#181818;stroke-width:1.0;"/>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="133" x="239.17" y="735.2349">execute ready handler</text>
+    </g>
+    <!--reverse link run to shutdown-->
+    <g id="link_run_shutdown">
+      <path d="M220.87,131.0479 C220.87,131.0479 220.87,821.5479 220.87,821.5479 C220.87,821.5479 206.39,821.5479 188.5,821.5479 " fill="none" id="run-backto-shutdown" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="220.88,126.0479,216.88,135.0479,220.88,131.0479,224.88,135.0479,220.88,126.0479" style="stroke:#181818;stroke-width:1.0;"/>
+    </g>
+    <text fill="#888888" font-family="sans-serif" font-size="10" lengthAdjust="spacing" textLength="139" x="172.5" y="872.2379">dashed arrow means priority</text>
+    <!--SRC=[VLF1ZjCm4BtFLunwWaDtuORsm6LPQLU0M5Ga3WYjh6GsiPfwWkFijaByEsEF7TnIk3JncpVlJVocmOQ1yDtjzJrEv9_8uyvOXmFpY2_Uay7N5sykNhq4cBRMZSQR7GxMKJYCXEn3pm2Ucc1S9pAhZx7tW_Iky2UWwSW5N7qrDk0ZUtIq3qXF0gxGJEXd1u1LzqqivNQjFx2Zg8I1EmgzJ1SFHNXZEsU6n9tIArJ5M-DQ4QquVK8K4E8l-9VkpJwG5n9kkDcI3aiPUvWITiRfN9TQbeeM_ckTWlWyap-a_X_nhVQwzzpGD5MKKP445Ed2_c9tnBEE4lGT4kF8EvFlBZ_XHbR0DgJ2FAGBNIw5cZcGv6NQG_umhpb5H7KpzxgdPekRVWujFpiDA1z0Q18ihjTlbu2lKAQfjWDA8P9oilh0jRTT7mIkmum270hpg18LqeUK_c-jcNfglmj-6kd9-TJhE4NnB7pCVBs7i-HbZByygdaqxFJxnxkELpprZrhx7H4MdwnIgPVyytEXYcY1Q3zQJoqaEEQJehugOHV3L4tHv4o5ulXuCK1FbGYTsnzO9DQpBWJ08xFS4UhaQBpdPzoHSN7LBNiR3l0R]-->
+  </g>
+</svg>

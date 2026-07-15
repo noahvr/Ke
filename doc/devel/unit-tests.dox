@@ -1,0 +1,719 @@
+// Copyright (C) 2015-2025 Internet Systems Consortium, Inc. ("ISC")
+//
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+/**
+
+ @page unitTests Building Kea with Unit Tests
+
+By default, Kea is built without unit tests as they're used mostly by
+developers and prospective contributors. Kea's unit tests are using
+<a href="https://github.com/google/googletest">gtest framework</a> from
+Google. Google's approach has changed over the years. For some time,
+they were very keen on not installing gtest as a normal software would
+be, but rather provide gtest as sources. This was further complicated
+with the fact that some Linux distributions packaged gtest and tried
+to mimic its installation. Meson tries its best to accommodate all typical
+situations and to locate gtest on its own. If it cannot be found, linking
+/usr/src/googletest to the custom location should do the trick. If that does
+not work either, the Kea project has a gtest.wrap which instructs it how to
+fetch googletest on its own. The `-D tests=enabled` flag has to be provided.
+
+@code
+meson setup build -D tests=enabled
+@endcode
+
+@note When tests are enabled, Meson 1.8.0 or later is strongly recommended. It
+fixes a bug where "meson setup" takes a long time and a high amount of RAM:
+https://github.com/mesonbuild/meson/issues/11322. 'hammer.py prepare-system'
+or `./meson.sh --install` both install it.
+
+After that you run the unit tests with:
+
+@code
+meson compile -C build
+meson test -C build
+@endcode
+
+Kea should work with gtest versions 1.8.0 and later.
+
+@section unitTestsEnvironmentVariables Environment Variables
+
+The following environment variable can affect the unit tests:
+
+- KEA_LOCKFILE_DIR - Specifies a directory where the logging system should
+  create its lock file. If not specified, it is <i>prefix</i>/var/run/kea,
+  where <i>prefix</i> defaults to /usr/local. This variable must not end
+  with a slash. There is one special value, "none", which instructs Kea to
+  not create a lock file at all. This may cause issues if several processes
+  log to the same file.  (Also see the Kea User's Guide, section 15.3.)
+
+- KEA_LOGGER_DESTINATION - Specifies the logging destination. If not set, logged
+  messages will not be recorded anywhere. There are three special values:
+  stdout, stderr and syslog. Any other value is interpreted as a filename.
+  (Also see Kea User's Guide, section 15.3.)
+
+- KEA_LOG_CHECK_VERBOSE - Specifies the log check default verbosity. If not
+  set, unit tests using the log utils to verify that logs are generated as
+  expected are by default silent. If set, these unit tests display real
+  and expected logs.
+
+- KEA_MYSQL_HAVE_SSL - Specifies the SSL/TLS support status of MySQL.
+  When not set the corresponding MySQL global variable is read and
+  the environment of the unit test process is updated so usually this
+  variable is manually set only in order to enforce a particular status.
+
+- KEA_PGSQL_HAVE_SSL - Specifies the SSL/TLS support status of PostgreSQL.
+  When not set the corresponding PostgreSQL global variable is read and
+  the environment of the unit test process is updated so usually this
+  variable is manually set only in order to enforce a particular status.
+
+- KEA_PIDFILE_DIR - Specifies the directory which should be used for PID files
+  as used by dhcp::Daemon or its derivatives. If not specified, the
+  default is <i>prefix</i>/var/run/kea, where <i>prefix</i> defaults to
+  /usr/local. This variable must not end with a slash.
+
+- KEA_SOCKET_TEST_DIR - If set, it specifies the directory where Unix
+  sockets are created. There is an operating system limitation on how
+  long a Unix socket path can be, typically slightly over 100
+  characters. By default unit-tests create sockets in temporary folder
+  under /tmp folder. KEA_SOCKET_TEST_DIR can be specified to instruct
+  unit-tests to use a different directory. It must not end with slash.
+
+- KEA_TEST_DB_WIPE_DATA_ONLY - Unit tests which use a Kea unit test
+  database take steps to ensure they are starting with an empty database
+  of the correct schema version.  The first step taken is to simply
+  delete the transient data (such as leases, reservations, etc..), provided
+  the schema exists and is the expected version.  If the schema does not
+  exist, is not the expected version, or for some reason the data wipe fails,
+  the schema will be dropped and recreated. Setting this value to "false"
+  will cause the test setup logic to always drop and create the database
+  schema. The default value is "true".
+
+- KEA_TLS_CHECK_VERBOSE - Specifies the TLS check default verbosity. If not
+  set, TLS unit tests triggering expected failures are by default silent.
+  If set, these TLS unit tests display the error messages which are very
+  dependent on the cryptographic backend and boost library versions.
+
+@note Setting KEA_TEST_DB_WIPE_DATA_ONLY to false may dramatically
+increase the time it takes each unit test to execute.
+
+- GTEST_OUTPUT - Save the test results in XML files. Make it point to a location
+where a file or directory can be safely created. If there is no file or
+directory at that location, adding a trailing slash
+`GTEST_OUTPUT=${PWD}/test-results/` will create a directory containing an XML
+file for each directory being tested. Leaving the slash out will create a single
+XML file and will put all the test results in it.
+
+- DEBUG - Set this variable to make shell tests output the commands that are
+run. They are shown just before they are effectively run. Can be set to
+anything e.g. `DEBUG=true`. `unset DEBUG` to remove this behavior.
+
+@section unitTestsSanitizers Use Sanitizers
+
+  GCC and LLVM support some sanitizers which perform additional tests
+  at runtime, for instance the ThreadSanitizer (aka TSan) detects data
+  race in executed C++ code (unfortunately on macOS it intercepts
+  signals and fails to send them to waiting select system calls so
+  some tests always fail when it is used, experiments are run with
+  different versions of Tsan).
+
+  The simplest way to enable a sanitizer is to specify the flag on the setup
+  step with `meson setup build -D b_sanitize=thread`.
+
+  When enabling lcov (code coverage), some gtest functions are detected as
+  not being thread safe. It is recommended to disable lcov when enabling
+  thread sanitizer.
+
+@section unitTestsDatabaseConfig Databases Configuration for Unit Tests
+
+  With the use of databases requiring separate authorization, there are
+  certain database-specific pre-requisites for successfully running the unit
+  tests.  These are listed in the following sections.
+
+  @subsection unitTestsDatabaseUsers Database Users Required for Unit Tests
+
+  Unit tests validating database backends require that the <i>keatest</i>
+  database is created. This database should be empty.  The unit tests
+  also require that the <i>keatest</i> user is created and that this user
+  is configured to access the database with a password of <i>keatest</i>.
+  Unit tests use these credentials to create database schema, run test cases
+  and drop the schema. Thus, the <i>keatest</i> user must have sufficiently
+  high privileges to create and drop tables, as well as insert and modify the
+  data within those tables.
+
+  The database backends which support read only access to the host
+  reservations databases (currently MySQL and PostgreSQL) include unit
+  tests verifying that a database user with read-only privileges can be
+  used to retrieve host reservations. Those tests require another user,
+  <i>keatest_readonly</i>, with SQL SELECT privilege to the <i>keatest</i>
+  database (i.e. without INSERT, UPDATE etc.), is also created.
+  <i>keatest_readonly</i> should also have the password <i>keatest</i>.
+
+  The following sections provide step-by-step guidelines how to setup the
+  databases for running unit tests.
+
+  @subsection mysqlUnitTestsPrerequisites MySQL Database
+
+  The steps to create the database and users are:
+
+  -# Log into MySQL as root:
+  @verbatim
+  % mysql -u root -p
+  Enter password:
+     :
+  mysql>@endverbatim\n
+  -# Create the test database.  This must be called "keatest":
+  @verbatim
+  mysql> CREATE DATABASE keatest;
+  mysql>@endverbatim\n
+  -# Create the users under which the test client will connect to the database
+  (the apostrophes around the words <i>keatest</i>, <i>keatest_readonly</i>, and
+   <i>localhost</i> are required):
+  @verbatim
+  mysql> CREATE USER 'keatest'@'localhost' IDENTIFIED BY 'keatest';
+  mysql> CREATE USER 'keatest_readonly'@'localhost' IDENTIFIED BY 'keatest';
+  mysql> CREATE USER 'keatest_secure'@'localhost' IDENTIFIED BY 'keatest';
+  mysql> ALTER USER 'keatest_secure'@'localhost' REQUIRE X509;
+  mysql>@endverbatim\n
+  Some old versions of MySQL do not support the REQUIRE keyword in ALTER
+  USER. Fortunately all versions support it in GRANT even if it is less secure
+  as the requirement will apply only to commands for the database instead
+  to all connections so all commands. And of course in production many
+  stronger requirements are available: X509 only requires the user to
+  present a certificate: you can specify which certificate by requiring
+  for instance a particular Subject Name, etc.
+  -# Grant the created users permissions to access the <i>keatest</i> database
+  (again, the apostrophes around the user names and <i>localhost</i>
+  are required):
+  @verbatim
+  mysql> GRANT ALL ON keatest.* TO 'keatest'@'localhost';
+  mysql> GRANT SELECT ON keatest.* TO 'keatest_readonly'@'localhost';
+  mysql> GRANT ALL ON keatest.* TO 'keatest_secure'@'localhost';
+  mysql>@endverbatim\n
+  When the REQUIRE in ALTER USER is not supported change the last line by:
+  @verbatim
+  mysql> GRANT ALL ON keatest.* TO 'keatest_secure'@'localhost' REQUIRE X509;
+  mysql>@endverbatim\n
+  -# If you get <i>You do not have the SUPER privilege and binary logging is
+  enabled</i> error message, you need to add:
+  @verbatim
+  mysql> SET GLOBAL LOG_BIN_TRUST_FUNCTION_CREATORS = 1;
+  mysql>@endverbatim\n
+  -# Exit MySQL:
+  @verbatim
+  mysql> quit
+  Bye
+  %@endverbatim
+
+  The unit tests are run automatically when "meson test" is executed (providing
+  that Kea has been built with the "-D mysql" switch (see the installation
+  section in the <a href="https://kea.readthedocs.io/">Kea Administrator
+  Reference Manual</a>).
+
+ @subsection mysqlUnitTestsTLS MySQL Database with SSL/TLS
+
+  Usually MySQL is compiled with SSL/TLS support using OpenSSL.
+  This is easy to verify using the:
+
+@verbatim
+mysql> SHOW GLOBAL VARIABLES LIKE 'have_ssl';
+@endverbatim
+
+  The variable is documented to have three possible values:
+
+- DISABLED: compiled with TLS support but it was not configured
+
+- YES: compiled with configured TLS support
+
+- NO: not compiled with TLS support
+
+The value of this MySQL global variable is reflected by the
+KEA_MYSQL_HAVE_SSL environment variable.
+
+Recent versions of Community MySQL does not support this global variable.
+SSL/TLS support detection was extended to use status using:
+
+@verbatim
+mysql> SHOW STATUS LIKE 'ssl_cipher';
+@endverbatim
+
+The keatest_secure user requires X509 so a client certificate. Of course
+in production a stricter requirement should be used, in particular when
+a client certificate should be bound to a particular user.
+
+MySQL unit tests reuse the asiolink library setup. This .my.cnf
+configuration file works with MariaDB 10.6.4:
+
+@verbatim
+[mysqld]
+ssl_cert=<kea-sources>/src/lib/asiolink/testutils/ca/kea-server.crt
+ssl_key=<kea-sources>/src/lib/asiolink/testutils/ca/kea-server.key
+ssl_ca=<kea-sources>/src/lib/asiolink/testutils/ca/kea-ca.crt
+
+[client-mariadb]
+ssl_cert=<kea-sources>/src/lib/asiolink/testutils/ca/kea-client.crt
+ssl_key=<kea-sources>/src/lib/asiolink/testutils/ca/kea-client.key
+ssl_ca=<kea-sources>/src/lib/asiolink/testutils/ca/kea-ca.crt
+ssl-verify-server-cert
+@endverbatim
+
+The last statement requires mutual authentication named two way in the
+MariaDB documentation. For MySQL versions greater than 5.7.11 this
+statement should be replaced by:
+
+@verbatim
+[client]
+...
+ssl-mode=VERIFY_IDENTITY
+@endverbatim
+
+On Debian some MySQL packages use GnuTLS instead OpenSSL to provide
+the SSL/TLS support: this is known to not work with this proposed setup.
+
+ @subsection pgsqlUnitTestsPrerequisites PostgreSQL Database
+
+  PostgreSQL set up differs from system to system. Please consult your
+  operating system-specific PostgreSQL documentation. The remainder of
+  that section uses Ubuntu 13.10 x64 (with PostgreSQL 9.0+) as an example.
+
+  On Ubuntu, PostgreSQL is installed (with <tt>sudo apt-get install
+  postgresql</tt>) under user <i>postgres</i>. To create new databases
+  or add new users, initial commands must be issued under this username:
+
+@verbatim
+$ sudo -u postgres psql postgres
+[sudo] password for thomson:
+psql (9.1.12)
+Type "help" for help.
+postgres=# CREATE USER keatest WITH PASSWORD 'keatest';
+CREATE ROLE
+postgres=# CREATE DATABASE keatest;
+CREATE DATABASE
+postgres=# GRANT ALL PRIVILEGES ON DATABASE keatest TO keatest;
+GRANT
+postgres=# \c keatest
+You are now connected to database "keatest" as user "postgres".
+keatest=# GRANT ALL PRIVILEGES ON SCHEMA public TO keatest;
+GRANT
+postgres=# \q
+@endverbatim
+
+  PostgreSQL versions earlier than 9.0 don't provide an SQL statement for granting
+  privileges on all tables in a database. In newer PostgreSQL versions, it is
+  possible to grant specific privileges on all tables within a schema.
+  However, this only affects tables which exist when the privileges are granted.
+  To ensure that the user has specific privileges to tables dynamically created
+  by the unit tests, the default schema privileges must be altered.
+  In Postgres 15.0+, you need to explicitly grant privileges to access
+  the ``public`` schema.
+
+  The following example demonstrates how to create the user <i>keatest_readonly</i>,
+  which has SELECT privilege to the tables within the <i>keatest</i> database,
+  in Postgres 9.0+. For earlier versions of Postgres, it is recommended to
+  simply grant full privileges to <i>keatest_readonly</i>, using the
+  same steps as for the <i>keatest</i> user.
+
+@verbatim
+$ psql -U postgres
+Password for user postgres:
+psql (9.1.12)
+Type "help" for help.
+
+postgres=# CREATE USER keatest_readonly WITH PASSWORD 'keatest';
+CREATE ROLE
+postgres=# CREATE USER keatest_secure WITH ENCRYPTED PASSWORD 'keatest';
+CREATE ROLE
+postgres=# \q
+
+$ psql -U keatest
+Password for user keatest:
+psql (9.1.12)
+Type "help" for help.
+
+keatest=> ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES to keatest_readonly;
+ALTER DEFAULT PRIVILEGES
+keatest=> ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES to keatest_secure;
+ALTER DEFAULT PRIVILEGES
+keatest=> \q
+@endverbatim
+
+  Note that the <i>keatest</i> user (rather than <i>postgres</i>) is used to grant
+  privileges to the <i>keatest_readonly</i> user. This ensures that the SELECT
+  privilege is granted only on the tables that the <i>keatest</i> user can access
+  within the public schema.
+
+  It seems this no longer works on recent versions of PostgreSQL: if you get
+  a permission problem on SELECT on the schema_version table for
+  eatest_readonly, please try with the schema loaded:
+
+@verbatim
+$ psql -h localhost -U keatest -d keatest
+Password for user keatest:
+psql (11.3 (Debian 11.3-1))
+SSL connection (protocol: TLSv1.3, cipher: TLS_AES_256_GCM_SHA384, bits: 256, compression: off)
+Type "help" for help.
+
+keatest=> GRANT SELECT ON ALL TABLES IN SCHEMA public TO keatest_readonly;
+GRANT
+keatest=> GRANT SELECT ON ALL TABLES IN SCHEMA public TO keatest_secure;
+GRANT
+keatest=> \q
+@endverbatim
+
+  Now we should be able to log into the newly created database using both user
+  names:
+@verbatim
+$ psql -d keatest -U keatest
+Password for user keatest:
+psql (9.1.12)
+Type "help" for help.
+
+keatest=> \q
+
+$ psql -d keatest -U keatest_readonly
+Password for user keatest_readonly:
+psql (9.1.12)
+Type "help" for help.
+
+keatest=>
+@endverbatim
+
+  If instead of seeing keatest=> prompt, your login is refused with an error
+  code about failed peer or
+  <tt>Ident authentication failed for user "keatest"</tt>, it means that
+  PostgreSQL is configured to check unix username and reject login attempts if
+  PostgreSQL names are different. To alter that, the PostgreSQL pg_hba.conf
+  configuration file must be changed. It usually resides at
+  <tt>/var/lib/postgresql/data/pg_hba.conf</tt> or at
+  <tt>/etc/postgresql/${version}/main/pg_hba.conf</tt>, but you can find out
+  for sure by running
+  <tt>sudo -u postgres psql -t -c 'SHOW hba_file'</tt>. Make sure
+  that all the authentication methods are changed to "md5" like this:
+
+@verbatim
+local   all             all                                     md5
+host    all             all             127.0.0.1/32            md5
+host    all             all             ::1/128                 md5
+@endverbatim
+
+  Another possible problem is that you get no password prompt. This is
+  most probably because you have no <tt>pg_hba.conf</tt> config file
+  and everybody is by default trusted. As it has a very bad effect
+  on the security you should have been warned this is a highly unsafe
+  configuration. The solution is the same, i.e., require password or
+  md5 authentication method.
+
+  If you lose the postgres user access you can first add:
+@verbatim
+local   all             postgres                                trust
+@endverbatim
+  to trust only the local postgres user. Note the postgres user can
+  be pgsql on some systems.
+
+  Please consult your PostgreSQL user manual before applying those changes as
+  those changes may expose your other databases that you run on the same system.
+  In general case, it is a poor idea to run anything of value on a system
+  that runs tests. Use caution!
+
+  The unit tests are run automatically when "meson test" is executed (providing
+  that Kea has been build with the "-D postgresql" switch (see the installation
+  section in the <a href="https://kea.readthedocs.io">Kea Administrator
+  Reference Manual</a>).
+
+ @subsection pgsqlUnitTestsTLS PostgreSQL Database with SSL/TLS
+
+  PostgreSQL can be configured with SSL/TLS support using OpenSSL.
+  This is easy to verify using the:
+
+@verbatim
+postgres=# select name, setting from pg_settings where name like 'ssl';
+                  name                  |                    setting
+----------------------------------------+-----------------------------------------------
+ ssl                                    | on
+@endverbatim
+
+The value of this PostgreSQL global variable is reflected by the
+KEA_PGSQL_HAVE_SSL environment variable.
+
+The keatest_secure user requires X509 so a client certificate. Of course
+in production a stricter requirement should be used, in particular when
+a client certificate should be bound to a particular user.
+
+PostgreSQL unit tests reuse the asiolink library setup.
+
+The default server configuration path is specific for each system.
+
+This postgresql.conf configuration file works with PostgreSQL 16.9 on
+Ubuntu 24.04:
+
+@verbatim
+# - SSL -
+
+ssl = on
+ssl_ca_file = '/etc/postgresql/16/main/conf.d/kea-ca.crt'
+ssl_cert_file = '/etc/postgresql/16/main/conf.d/kea-server.crt'
+ssl_key_file = '/etc/postgresql/16/main/conf.d/kea-server.key'
+@endverbatim
+
+
+Files must have right permissions for PostgreSQL the server to start.
+
+The file owner and group is specific for each system.
+
+The following example works on Ubuntu 24.04.
+
+@verbatim
+chown postgres:postgres /etc/postgresql/16/main/conf.d/kea-server.key
+chmod og-rwx /etc/postgresql/16/main/conf.d/kea-server.key
+@endverbatim
+
+@section unitTestsKerberos Kerberos Configuration for Unit Tests
+
+The GSS-TSIG hook library uses the GSS-API with Kerberos. While there are
+no doubts that the hook can be safely used with a valid Kerberos configuration
+in production, unit tests reported problems on some systems.
+
+GSS-TSIG hook unit tests use a setup inherited from bind9 with old crypto
+settings which are not allowed by default Kerberos system configuration.
+A simple workaround is to set the KRB5_CONFIG environment variable to
+a random value that doesn't match a file (e.g. KRB5_CONFIG=).
+
+@section unitTestsRootPrivileges Running Unit Tests with Root Privileges
+
+Some unit tests require root privileges to run, including:
+
+- some packet filtering unit tests
+- some ping check unit tests
+
+To maximize the chance that these tests are always run during development,
+there is an attempt done to run them automatically with elevated privileges
+when ``meson test`` is run. In order to do that, at setup-time, Meson checks if
+sudo can be run non-interactively. If not, the tests that require root
+privileges are part of the regular targets ``dhcp-ping-check-tests`` and
+``kea-dhcp-tests``. If the check passes, then the tests are included in special
+targets ``sudo-dhcp-ping-check-tests`` and ``sudo-kea-dhcp-tests``. These
+targets run the unit test binaries prefixed with sudo which per the check done
+priorly, should be possible in a non-interactive manner. The tests requiring
+root privileges are also part of a special suite called ``sudo-tests`` which
+can be run exclusively with the ``--suite`` flag, or can be excluded with the
+``--no-suite`` flag.
+
+@section writingShellScriptsAndTests Writing shell scripts and tests
+
+Shell tests are `shellcheck`ed. But there are other writing practices that are
+good to follow in order to keep, not only shell tests, but shell scripts in
+general, POSIX-compliant. See below:
+
+- For portability, all shell scripts should have a shebang.
+@code
+#!/bin/sh
+@endcode
+The `sh` shell can differ on various operating systems. On most systems it is
+GNU sh. Notable exceptions are Alpine which links it to ash, FreeBSD which has
+the primordial non-GNU sh, Ubuntu which links it to dash. These four shells
+should all be tested against, when adding shell scripts or making changes to
+them.
+
+- Reference variables with curly brackets.
+@code
+${var}  # better
+$var
+@endcode
+For consistency with cases where you need advanced features from the variables
+which make the curly brackets mandatory. Such cases are:
+@code
+# Retrieving variable/string length...
+${#var}
+
+# Defaulting to a given value when the variable is undefined...
+${var-default}
+
+# Substituting the variable with a given value when the variable is defined...
+${var+value}
+
+# Concatenating the value of a variable with an alphanumeric constant...
+${var}constant
+@endcode
+
+- Always use `printf` instead of `echo`. There are times when a newline is not
+desired such as when you want to print on a single line from multiple points
+in your script or when you want to get the character count from an expression:
+@code
+var1='not '
+var2=' you want to ignore'
+
+# Prints the number of characters.
+printf '%s' "${var1}something${var2}" | wc -c
+# Result:
+  32
+
+# This one prints a plus one i.e. the inherent newline.
+echo "${var1}something${var2}" | wc -c
+# Result:
+  33
+
+# `echo` does have `-n` to suppress newline, but...
+# SC2039: In POSIX sh, echo flags are undefined.
+echo -n "${var1}something${var2}" | wc -c
+# Result:
+  32  # sometimes, other times an error
+@endcode
+`printf` also has the benefit of separating the format from the actual variables
+which has many use cases. One such use case is coloring output with ANSI escape
+sequence codes, see the `test_finish` function in
+`src/lib/testutils/dhcp_test_lib.sh.in`, which is not possible with POSIX echo.
+
+- `set -e` should be enabled at all times to immediately fail when a command
+returns a non-zero exit code. There are times when you expect a non-zero exit
+code in your tests. This is what the `run_command` function in
+`src/lib/testutils/dhcp_test_lib.sh.in` is for. It momentarily disables the `-e`
+flag to capture the output and exit code and enables it again afterwards. The
+variables used are `${EXIT_CODE}` and `${OUTPUT}`. /dev/stderr is not captured.
+`run_command` also doesn't work with pipes and redirections. When these
+mechanisms are needed, you can always wrap your complex expression in a function
+and then call `run_command wrapping_function`. Alternatively, if you only care
+about checking for zero exit code, you can use `if` conditions.
+@code
+# The non-zero exit code does not stop script execution, but we can still adjust
+# behavior based on it.
+if maybe-failing-command; then
+  f
+else
+  g
+fi
+@endcode
+There are times when your piped or redirected command that is expected to return
+non-zero is so small or has so few instantiations that it doesn't deserve a
+separate function. Such an example could be grepping for something in a
+variable. `grep` returns a non-zero exit code if it doesn't find anything. In
+that case, you can add `|| true` at the end to signal the fact that you allow
+finding nothing like so:
+@code
+printf '%s' "${var}" | grep -F 'search-criterion' || true
+@endcode
+
+- `set -u` should be enabled at all times to immediately signal an undefined
+variable. If you're a stickler for the legacy behavior of defaulting to an empty
+space then you can reference all your variables with:
+@code
+# Default variable is an empty space.
+${var-}
+
+# Or like this if you prefer to quote the empty space.
+${var-''}
+@endcode
+
+- SC2086: Double quote to prevent globbing and word splitting.
+Even though covered by shellcheck, it's worth mentioning because shellcheck
+doesn't always warn you because of what might be a systematic deduction of when
+quoting is not needed. Globbing is a pattern matching mechanism. It's used a lot
+with the `*` wildcard character e.g. `ls *.txt`. Sometimes, you want to glob
+intentionally. In that case, you can omit quoting, but it is preferable to take
+the wildcard characters outside the variable so that you are able to quote to
+prevent other globbing and word splitting e.g.:
+@code
+# Globbing done right
+ls "${var}"*.txt
+
+# Word splitting problem
+path='/home/my user'
+ls ${path}
+
+# Result:
+  ls: cannot access '/home/my': No such file or directory
+  ls: cannot access 'user': No such file or directory
+
+# Word splitting avoided
+path='/home/my user'
+ls "${path}"
+
+# Result:
+  Desktop
+  Documents
+  Downloads
+@endcode
+If you have an expression composed of multiple variables don't just quote the
+variables. It's correct, but not readable. Quote the entire expression.
+@code
+# no
+"${var1}"some-fixed-contiguous-value"${var2}"
+
+# yes
+"${var1}some-fixed-contiguous-value${var2}"
+@endcode
+
+- Single quote expressions when no variables are inside. This is to avoid the
+need to escape special shell characters like `$`.
+
+- All shell tests are created from `.in` autoconf template files. They
+initially contain template variables like `@prefix@` which are then substituted
+with the configured values. All of these should be double quoted, not
+single-quoted since they themselves can contain shell variables that need to be
+expanded.
+
+- Use `$(...)` notation instead of legacy backticks. One important advantage is
+that the `$(...)` notation allows for nested executions.
+@code
+# SC2006 Use `$(...)` notation instead of legacy backticked `...`.
+hostname=`cat /etc/hostname`
+
+# Better
+hostname=$(cat /etc/hostname)
+
+# Nested executions
+is_ssh_open=$(nc -vz $(cat /etc/hostname).lab.isc.org 22)
+
+# Results in confusing "command not found" messages.
+is_ssh_open=`nc -vz `cat /etc/hostname`.lab.isc.org 22`
+@endcode
+
+- When using `test` and `[`, `==` is just a convenience alias for `=`. Use `=`
+because it's more widely supported. If using, `[[`, then indeed `==` has extra
+features like glob matching. But don't use `[[`, it's not part of the POSIX
+standard.
+
+- Capturing parameters in functions or scripts simply cannot be done without
+breaking POSIX compliance. In POSIX, pass the quoted parameters `"${@}"` as
+positional parameters to all the function and scripts invocations. if it gets
+too unmanageable or you need custom positional arguments then break your script
+into multiple scripts or handle all possible parameters and don't accept any
+ad-hoc parameters.
+@code
+# Neither of these preserve original quoting.
+parameters="${*}"
+parameters="${@}"
+
+# In advanced shells this could be done with lists.
+parameters=( "${@}" )
+do-something --some --other --optional --parameters "${parameters[@]}"
+
+# Proper POSIX way
+do-something --some --other --optional --parameters "${@}"
+@endcode
+
+- Never use `eval`. It doesn't preserve original quoting. Have faith that there
+are always good alternatives.
+
+@section regeneratingConfigUnitTests Regenerating configuration unit tests
+
+There are two sets of unit tests that when changed require a bit more laborious procedure for
+regenerating.
+
+- `src/bin/dhcp4/tests/get_config_unittest.cc` generated from `src/bin/dhcp4/tests/get_config_unittest.cc.skel`
+- `src/bin/dhcp6/tests/get_config_unittest.cc` generated from `src/bin/dhcp6/tests/get_config_unittest.cc.skel`
+
+To regenerate, for the DHCPv6 example, start by running `./build/src/bin/dhcp6/tests/make-rebuild.sh`
+and you will be presented with a set of instructions. It does the following:
+
+1. Copies the contents of the `get_config_unittest.cc.skel` file into a temporary `get_config_unittest_rebuild.cc` file.
+2. Instructs you to recompile `kea-dhcp6-tests-extract` which can be done with `meson compile -C build kea-dhcp6-tests-extract`.
+3. Runs `kea-dhcp6-tests-extract` which populates the `x` file.
+4. Instructs you to copy the contents of the `x` file into the `EXTRACTED_CONFIGS` section of `get_config_unittest_rebuild.cc`.
+5. Runs `kea-dhcp6-tests-generate` which populates the `u` file.
+6. Instructs you to copy the contents of the `u` file into the `UNPARSED_CONFIGS` section of `get_config_unittest_rebuild.cc`.
+7. Finally copies `get_config_unittest_rebuild.cc` into `get_config_unittest.cc`.
+
+ */

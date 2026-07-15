@@ -1,0 +1,66 @@
+#!/bin/sh
+
+# Copyright (C) 2011-2025 Internet Systems Consortium, Inc. ("ISC")
+#
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+# Checks that a local message file can override the definitions in the message
+# dictionary.
+
+# Exit with error if commands exit with non-zero and if undefined variables are
+# used.
+set -eu
+
+# Include common test library.
+# shellcheck disable=SC1091
+# SC1091: Not following: ... was not specified as input (see shellcheck -x).
+. "@abs_top_builddir@/src/lib/testutils/dhcp_test_lib.sh"
+
+localmes="@abs_builddir@/localdef_mes_$$"
+tempfile="@abs_builddir@/run_time_init_test_tempfile_$$"
+
+# Create the local message file for testing
+
+cat > $localmes << .
+% LOG_NOTHERE this message is not in the global dictionary
+% LOG_READ_ERROR replacement read error, parameters: '%1' and '%2'
+% LOG_READING_LOCAL_FILE replacement read local message file, parameter is '%1'
+.
+
+test_start 'local-file.local-message-replacement'
+cat > $tempfile << .
+WARN  [example.log] LOG_NO_SUCH_MESSAGE could not replace message text for 'LOG_NOTHERE': no such message
+FATAL [example] LOG_WRITE_ERROR error writing to test1: 42
+ERROR [example] LOG_READING_LOCAL_FILE replacement read local message file, parameter is 'dummy/file'
+WARN  [example] LOG_BAD_STREAM bad log console output stream: example
+WARN  [example.alpha] LOG_READ_ERROR replacement read error, parameters: 'a.txt' and 'dummy reason'
+FATAL [example.beta] LOG_BAD_SEVERITY unrecognized log severity: beta_fatal
+ERROR [example.beta] LOG_BAD_DESTINATION unrecognized log destination: beta_error
+WARN  [example.beta] LOG_BAD_STREAM bad log console output stream: beta_warn
+.
+./logger_example -c stdout -s warn $localmes | \
+    sed -e 's/\[\([a-z0-9\.]\{1,\}\)\/\([0-9]\{1,\}\)\.\(0x\)\{0,1\}\([0-9A-Fa-f]\{1,\}\)\]/[\1]/' | \
+    cut -d' ' -f3- | diff $tempfile -
+test_finish $?
+
+test_start 'local-file.read-error-reporting'
+cat > $tempfile << .
+ERROR [example.log] LOG_INPUT_OPEN_FAIL unable to open message file $localmes for input: No such file or directory
+FATAL [example] LOG_WRITE_ERROR error writing to test1: 42
+ERROR [example] LOG_READING_LOCAL_FILE reading local message file dummy/file
+WARN  [example] LOG_BAD_STREAM bad log console output stream: example
+WARN  [example.alpha] LOG_READ_ERROR error reading from message file a.txt: dummy reason
+FATAL [example.beta] LOG_BAD_SEVERITY unrecognized log severity: beta_fatal
+ERROR [example.beta] LOG_BAD_DESTINATION unrecognized log destination: beta_error
+WARN  [example.beta] LOG_BAD_STREAM bad log console output stream: beta_warn
+.
+rm -f $localmes
+./logger_example -c stdout -s warn $localmes | \
+    sed -e 's/\[\([a-z0-9\.]\{1,\}\)\/\([0-9]\{1,\}\)\.\(0x\)\{0,1\}\([0-9A-Fa-f]\{1,\}\)\]/[\1]/' | \
+    cut -d' ' -f3- | diff $tempfile -
+test_finish $?
+
+# Tidy up.
+rm -f $tempfile

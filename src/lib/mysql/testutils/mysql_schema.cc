@@ -1,0 +1,226 @@
+// Copyright (C) 2015-2026 Internet Systems Consortium, Inc. ("ISC")
+//
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+#include <config.h>
+
+#include <exceptions/exceptions.h>
+#include <mysql/mysql_connection.h>
+#include <mysql/testutils/mysql_schema.h>
+#include <util/str.h>
+
+#include <cstdlib>
+#include <fstream>
+#include <iostream>
+#include <sstream>
+#include <string>
+
+#include <mysql.h>
+
+using namespace std;
+
+namespace isc {
+namespace db {
+namespace test {
+
+const char* MYSQL_VALID_TYPE = "type=mysql";
+
+string
+validMySQLConnectionString() {
+    return (connectionString(MYSQL_VALID_TYPE, VALID_NAME, VALID_HOST,
+                             VALID_USER, VALID_PASSWORD));
+}
+
+void destroyMySQLSchema(bool show_err, bool force) {
+    // If force is true or wipeMySQLData() fails, destroy the schema.
+    if (force || (!softWipeEnabled()) || wipeMySQLData(show_err)) {
+        runMySQLScript(DATABASE_SCRIPTS_DIR, "mysql/dhcpdb_drop.mysql", show_err);
+    }
+}
+
+void createMySQLSchema(bool show_err, bool force) {
+    // If force is true or wipeMySQLData() fails, recreate the schema.
+    if (force || (!softWipeEnabled()) || wipeMySQLData(show_err)) {
+        destroyMySQLSchema(show_err, true);
+        runMySQLScript(DATABASE_SCRIPTS_DIR, "mysql/dhcpdb_create.mysql", show_err);
+    }
+}
+
+bool wipeMySQLData(bool show_err) {
+    std::ostringstream cmd;
+    cmd << "sh " << DATABASE_WIPE_DIR << "/";
+
+    std::ostringstream version;
+    version << MYSQL_SCHEMA_VERSION_MAJOR  << "." << MYSQL_SCHEMA_VERSION_MINOR;
+
+    cmd << "mysql/wipe_data.sh " << version.str()
+        << " -N -B --user=keatest --password=keatest keatest";
+    if (!show_err) {
+        cmd << " 2>/dev/null ";
+    }
+
+    int retval = ::system(cmd.str().c_str());
+    if (retval) {
+        std::cerr << "wipeMySQLData failed:[" << cmd.str() << "]" << std::endl;
+    }
+
+    return(retval);
+}
+
+void runMySQLScript(const std::string& path, const std::string& script_name,
+                    bool show_err) {
+    std::ostringstream cmd;
+    cmd << "mysql -N -B --user=keatest --password=keatest keatest";
+    if (!show_err) {
+        cmd << " 2>/dev/null ";
+    }
+
+    if (!path.empty()) {
+        cmd << " < " << path << "/";
+    }
+
+    cmd << script_name;
+
+    int retval = ::system(cmd.str().c_str());
+    if (retval) {
+        std::cerr << "runMySQLSchema failed: " << cmd.str() << std::endl;
+        isc_throw(Unexpected, "runMySQLSchema failed: " << cmd.str());
+    }
+}
+
+string getMySQLTlsEnv() {
+    const string name("KEA_MYSQL_HAVE_SSL");
+    const char* val = getenv(name.c_str());
+    return (val ? string(val) : "");
+}
+
+string getMySQLTlsServerVariable(string variable) {
+    MYSQL_RES* result(0);
+    try {
+        DatabaseConnection::ParameterMap parameters =
+            DatabaseConnection::parse(validMySQLConnectionString());
+        MySqlConnection conn(parameters);
+        conn.openDatabase();
+        string sql("SHOW GLOBAL VARIABLES LIKE '");
+        sql += variable;
+        sql += "'";
+        if (mysql_query(conn.mysql_, sql.c_str())) {
+            isc_throw(DbOperationError,
+                      sql << ": " << mysql_error(conn.mysql_));
+        }
+        result = mysql_use_result(conn.mysql_);
+        size_t count = mysql_num_fields(result);
+        if (count != 2) {
+            isc_throw(DbOperationError,
+                      sql << " returned " << count << " rows, expecting 2");
+        }
+        MYSQL_ROW row = mysql_fetch_row(result);
+        if (!row) {
+            // This means the variable does not exist.
+            mysql_free_result(result);
+            return ("");
+        }
+        // first column is variable name e.g. 'have_ssl', second is the status.
+        string name(row[0]);
+        if (name != variable) {
+            isc_throw(DbOperationError,
+                      sql << " returned a wrong name '" << name
+                      << "', expected '" << variable << "'");
+        }
+        string value(row[1]);
+        mysql_free_result(result);
+        return (value);
+    } catch (...) {
+        if (result) {
+            mysql_free_result(result);
+        }
+        throw;
+    }
+}
+
+string getMySQLTlsStatusVariable(string variable) {
+    MYSQL_RES* result(0);
+    try {
+        DatabaseConnection::ParameterMap parameters =
+            DatabaseConnection::parse(validMySQLConnectionString());
+        MySqlConnection conn(parameters);
+        conn.openDatabase();
+        string sql("SHOW STATUS LIKE '");
+        sql += variable;
+        sql += "'";
+        if (mysql_query(conn.mysql_, sql.c_str())) {
+            isc_throw(DbOperationError,
+                      sql << ": " << mysql_error(conn.mysql_));
+        }
+        result = mysql_use_result(conn.mysql_);
+        size_t count = mysql_num_fields(result);
+        if (count != 2) {
+            isc_throw(DbOperationError,
+                      sql << " returned " << count << " rows, expecting 2");
+        }
+        MYSQL_ROW row = mysql_fetch_row(result);
+        if (!row) {
+            // This means the variable does not exist.
+            mysql_free_result(result);
+            return ("");
+        }
+        // first column is variable name e.g. 'Ssl_cipher', second is the status.
+        string name(row[0]);
+        util::str::lowercase(name);
+        if (name != variable) {
+            isc_throw(DbOperationError,
+                      sql << " returned a wrong name '" << name
+                      << "', expected '" << variable << "'");
+        }
+        string value(row[1]);
+        mysql_free_result(result);
+        return (value);
+    } catch (...) {
+        if (result) {
+            mysql_free_result(result);
+        }
+        throw;
+    }
+}
+
+bool isMySQLTlsConfigured() {
+    if (getMySQLTlsServerVariable("ssl_ca").find("kea-ca.crt") == string::npos) {
+        return (false);
+    }
+    if (getMySQLTlsServerVariable("ssl_cert").find("kea-server.crt") == string::npos) {
+        return (false);
+    }
+    if (getMySQLTlsServerVariable("ssl_key").find("kea-server.key") == string::npos) {
+        return (false);
+    }
+    return (true);
+}
+
+string getMySQLTlsServer() {
+    string value = getMySQLTlsServerVariable("have_ssl");
+    if (value == "YES") {
+        if (!isMySQLTlsConfigured()) {
+            value = "UNCONFIGURED";
+        }
+    } else if (value.empty()) {
+        // MySQL 9.x does not support the 'have_ssl' global variable
+        // so trying the 'ssl_ciper' status which returns the cipher name
+        // or the empty value. It is also on the long term a good
+        // candidate for replacing the 'have_ssl' check...
+        value = getMySQLTlsStatusVariable("ssl_cipher");
+        if (value.empty() || !isMySQLTlsConfigured()) {
+            value = "UNCONFIGURED";
+        } else {
+            value = "YES";
+        }
+    }
+    const string env("KEA_MYSQL_HAVE_SSL");
+    static_cast<void>(setenv(env.c_str(), value.c_str(), 1));
+    return (value);
+}
+
+}  // namespace test
+}  // namespace db
+}  // namespace isc

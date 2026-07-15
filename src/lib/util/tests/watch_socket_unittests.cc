@@ -1,0 +1,264 @@
+// Copyright (C) 2014-2026 Internet Systems Consortium, Inc. ("ISC")
+//
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
+#include <config.h>
+
+#include <util/fd_event_handler_factory.h>
+#include <util/ready_check.h>
+#include <util/watch_socket.h>
+
+#include <sys/ioctl.h>
+#include <gtest/gtest.h>
+
+#ifdef HAVE_SYS_FILIO_H
+// FIONREAD is here on Solaris
+#include <sys/filio.h>
+#endif
+
+using namespace std;
+using namespace isc;
+using namespace isc::util;
+
+namespace {
+
+/// @brief Tests the basic functionality of WatchSocket.
+TEST(WatchSocketTest, basics) {
+    WatchSocketPtr watch;
+
+    /// Verify that we can construct a WatchSocket.
+    ASSERT_NO_THROW(watch.reset(new WatchSocket()));
+    ASSERT_TRUE(watch);
+
+    /// Verify that post-construction the state the select-fd is valid.
+    int select_fd = watch->getSelectFd();
+    EXPECT_NE(select_fd, WatchSocket::SOCKET_NOT_VALID);
+
+    /// Verify that isReady() is false and that a call to select agrees.
+    EXPECT_FALSE(watch->isReady());
+    EXPECT_EQ(0, selectCheck(select_fd));
+
+    /// Verify that the socket can be marked ready.
+    ASSERT_NO_THROW(watch->markReady());
+
+    /// Verify that we have exactly one marker waiting to be read.
+    int count = 0;
+    EXPECT_FALSE(ioctl(select_fd, FIONREAD, &count));
+    EXPECT_EQ(static_cast<int>(sizeof(WatchSocket::MARKER)), count);
+
+    /// Verify that we can call markReady again without error.
+    ASSERT_NO_THROW(watch->markReady());
+
+    /// Verify that we STILL have exactly one marker waiting to be read.
+    EXPECT_FALSE(ioctl(select_fd, FIONREAD, &count));
+    EXPECT_EQ(static_cast<int>(sizeof(WatchSocket::MARKER)), count);
+
+    /// Verify that isReady() is true and that a call to select agrees.
+    EXPECT_TRUE(watch->isReady());
+    EXPECT_EQ(1, selectCheck(select_fd));
+
+    /// Verify that the socket can be cleared.
+    ASSERT_NO_THROW(watch->clearReady());
+
+    /// Verify that isReady() is false and that a call to select agrees.
+    EXPECT_FALSE(watch->isReady());
+    EXPECT_EQ(0, selectCheck(select_fd));
+}
+
+/// @brief Checks behavior when select_fd is closed externally while in the
+/// "cleared" state.
+TEST(WatchSocketTest, closedWhileClear) {
+    WatchSocketPtr watch;
+
+    /// Verify that we can construct a WatchSocket.
+    ASSERT_NO_THROW(watch.reset(new WatchSocket()));
+    ASSERT_TRUE(watch);
+
+    /// Verify that post-construction the state the select-fd is valid.
+    int select_fd = watch->getSelectFd();
+    ASSERT_NE(select_fd, WatchSocket::SOCKET_NOT_VALID);
+
+    // Verify that socket does not appear ready.
+    ASSERT_EQ(0, watch->isReady());
+
+    // Interfere by closing the fd.
+    ASSERT_EQ(0, close(select_fd));
+
+    // Verify that socket does not appear ready.
+    ASSERT_EQ(0, watch->isReady());
+
+    // Verify that clear does NOT throw.
+    ASSERT_NO_THROW(watch->clearReady());
+
+    // Verify that trying to mark it fails.
+    ASSERT_THROW(watch->markReady(), WatchSocketError);
+
+    // Verify that clear does NOT throw.
+    ASSERT_NO_THROW(watch->clearReady());
+
+    // Verify that getSelectFd() returns invalid socket.
+    ASSERT_EQ(WatchSocket::SOCKET_NOT_VALID, watch->getSelectFd());
+}
+
+/// @brief Checks behavior when select_fd has closed while in the "ready"
+/// state.
+TEST(WatchSocketTest, closedWhileReady) {
+    WatchSocketPtr watch;
+
+    /// Verify that we can construct a WatchSocket.
+    ASSERT_NO_THROW(watch.reset(new WatchSocket()));
+    ASSERT_TRUE(watch);
+
+    /// Verify that post-construction the state the select-fd is valid.
+    int select_fd = watch->getSelectFd();
+    ASSERT_NE(select_fd, WatchSocket::SOCKET_NOT_VALID);
+
+    /// Verify that the socket can be marked ready.
+    ASSERT_NO_THROW(watch->markReady());
+    EXPECT_EQ(1, selectCheck(select_fd));
+    EXPECT_TRUE(watch->isReady());
+
+    // The event handler must be created before closing the socket.
+    // It creates an internal pipe which will match the closed fd and the
+    // check for bad file descriptor will fail.
+    FDEventHandlerPtr handler = FDEventHandlerFactory::factoryFDEventHandler();
+    bool use_select = FDEventHandlerFactory::factoryFDEventHandler()->type() != FDEventHandler::TYPE_POLL;
+
+    // Interfere by closing the fd.
+    ASSERT_EQ(0, close(select_fd));
+
+    // Verify that isReady() does not throw.
+    ASSERT_NO_THROW(watch->isReady());
+
+    // and return false.
+    EXPECT_FALSE(watch->isReady());
+
+    // Verify that trying to clear it does not throw.
+    ASSERT_NO_THROW(watch->clearReady());
+
+    // Verify the select_fd fails as socket is invalid/closed.
+    if (use_select) {
+        ASSERT_EQ(-1, selectCheck(select_fd));
+    } else {
+        handler->add(select_fd);
+        EXPECT_EQ(1, handler->waitEvent(0, 0));
+    }
+
+    // Verify that subsequent attempts to mark it will fail.
+    ASSERT_THROW(watch->markReady(), WatchSocketError);
+}
+
+/// @brief Checks behavior when select_fd has been marked ready but then
+/// emptied by an external read.
+TEST(WatchSocketTest, emptyReadySelectFd) {
+    WatchSocketPtr watch;
+
+    /// Verify that we can construct a WatchSocket.
+    ASSERT_NO_THROW(watch.reset(new WatchSocket()));
+    ASSERT_TRUE(watch);
+
+    /// Verify that post-construction the state the select-fd is valid.
+    int select_fd = watch->getSelectFd();
+    ASSERT_NE(select_fd, WatchSocket::SOCKET_NOT_VALID);
+
+    /// Verify that the socket can be marked ready.
+    ASSERT_NO_THROW(watch->markReady());
+    EXPECT_TRUE(watch->isReady());
+    EXPECT_EQ(1, selectCheck(select_fd));
+
+    // Interfere by reading the fd. This should empty the read pipe.
+    uint32_t buf = 0;
+    ASSERT_EQ((read(select_fd, &buf, sizeof(buf))),
+              static_cast<int>(sizeof(buf)));
+    ASSERT_EQ(WatchSocket::MARKER, buf);
+
+    // Really nothing that can be done to protect against this, but let's
+    // make sure we aren't in a weird state.
+    ASSERT_NO_THROW(watch->clearReady());
+
+    // Verify the select_fd does not fail.
+    EXPECT_FALSE(watch->isReady());
+    EXPECT_EQ(0, selectCheck(select_fd));
+
+    // Verify that getSelectFd() returns is still good.
+    ASSERT_EQ(select_fd, watch->getSelectFd());
+}
+
+/// @brief Checks behavior when select_fd has been marked ready but then
+/// contents have been "corrupted" by a partial read.
+TEST(WatchSocketTest, badReadOnClear) {
+    WatchSocketPtr watch;
+
+    /// Verify that we can construct a WatchSocket.
+    ASSERT_NO_THROW(watch.reset(new WatchSocket()));
+    ASSERT_TRUE(watch);
+
+    /// Verify that post-construction the state the select-fd is valid.
+    int select_fd = watch->getSelectFd();
+    ASSERT_NE(select_fd, WatchSocket::SOCKET_NOT_VALID);
+
+    /// Verify that the socket can be marked ready.
+    ASSERT_NO_THROW(watch->markReady());
+    EXPECT_TRUE(watch->isReady());
+    EXPECT_EQ(1, selectCheck(select_fd));
+
+    // The event handler must be created before closing the socket.
+    // It creates an internal pipe which will match the closed fd and the
+    // check for bad file descriptor will fail.
+    FDEventHandlerPtr handler = FDEventHandlerFactory::factoryFDEventHandler();
+    bool use_select = FDEventHandlerFactory::factoryFDEventHandler()->type() != FDEventHandler::TYPE_POLL;
+
+    // Interfere by reading the fd. This should empty the read pipe.
+    uint32_t buf = 0;
+    ASSERT_EQ((read(select_fd, &buf, 1)), 1);
+    ASSERT_NE(WatchSocket::MARKER, buf);
+
+    // Really nothing that can be done to protect against this, but let's
+    // make sure we aren't in a weird state.
+    /// @todo maybe clear should never throw, log only
+    ASSERT_THROW(watch->clearReady(), WatchSocketError);
+
+    // Verify the select_fd does not evaluate to ready.
+    EXPECT_FALSE(watch->isReady());
+    if (use_select) {
+        EXPECT_EQ(-1, selectCheck(select_fd));
+    } else {
+        handler->add(select_fd);
+        EXPECT_EQ(1, handler->waitEvent(0, 0));
+    }
+
+    // Verify that getSelectFd() returns INVALID.
+    ASSERT_EQ(WatchSocket::SOCKET_NOT_VALID, watch->getSelectFd());
+
+    // Verify that subsequent attempt to mark it fails.
+    ASSERT_THROW(watch->markReady(), WatchSocketError);
+}
+
+/// @brief Checks if the socket can be explicitly closed.
+TEST(WatchSocketTest, explicitClose) {
+    WatchSocketPtr watch;
+
+    // Create new instance of the socket.
+    ASSERT_NO_THROW(watch.reset(new WatchSocket()));
+    ASSERT_TRUE(watch);
+
+    // Make sure it has been opened by checking that its descriptor
+    // is valid.
+    EXPECT_NE(watch->getSelectFd(), WatchSocket::SOCKET_NOT_VALID);
+
+    // Close the socket.
+    std::string error_string;
+    ASSERT_TRUE(watch->closeSocket(error_string));
+
+    // Make sure that the descriptor is now invalid which indicates
+    // that the socket has been closed.
+    EXPECT_EQ(WatchSocket::SOCKET_NOT_VALID, watch->getSelectFd());
+    // No errors should be reported.
+    EXPECT_TRUE(error_string.empty());
+    // Not ready too.
+    ASSERT_NO_THROW(watch->isReady());
+    EXPECT_FALSE(watch->isReady());
+}
+
+} // end of anonymous namespace

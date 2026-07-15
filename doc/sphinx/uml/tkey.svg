@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="us-ascii" standalone="no"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" contentStyleType="text/css" height="200px" preserveAspectRatio="none" style="width:271px;height:200px;background:#FFFFFF;" version="1.1" viewBox="0 0 271 200" width="271px" zoomAndPan="magnify">
+  <defs/>
+  <g>
+    <text fill="#000000" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacing" textLength="220" x="24.5" y="29.9659">TKEY Exchange (GSS-TSIG hook)</text>
+    <line style="stroke:#181818;stroke-width:0.5;stroke-dasharray:5.0,5.0;" x1="58" x2="58" y1="79.1358" y2="162.5479"/>
+    <line style="stroke:#181818;stroke-width:0.5;stroke-dasharray:5.0,5.0;" x1="220" x2="220" y1="79.1358" y2="162.5479"/>
+    <rect fill="#E2E2F0" height="33.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="107" x="5" y="45.0679"/>
+    <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="93" x="12" y="67.0339">Kea D2 server</text>
+    <rect fill="#E2E2F0" height="33.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="107" x="5" y="161.5479"/>
+    <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="93" x="12" y="183.5138">Kea D2 server</text>
+    <rect fill="#E2E2F0" height="33.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="89" x="176" y="45.0679"/>
+    <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="75" x="183" y="67.0339">DNS server</text>
+    <rect fill="#E2E2F0" height="33.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="89" x="176" y="161.5479"/>
+    <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="75" x="183" y="183.5138">DNS server</text>
+    <polygon fill="#181818" points="208.5,108.8419,218.5,112.8419,208.5,116.8419,212.5,112.8419" style="stroke:#181818;stroke-width:1.0;"/>
+    <line style="stroke:#181818;stroke-width:1.0;" x1="58.5" x2="214.5" y1="112.8419" y2="112.8419"/>
+    <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="78" x="65.5" y="107.0328">TKEY request</text>
+    <polygon fill="#181818" points="69.5,140.5479,59.5,144.5479,69.5,148.5479,65.5,144.5479" style="stroke:#181818;stroke-width:1.0;"/>
+    <line style="stroke:#181818;stroke-width:1.0;" x1="63.5" x2="219.5" y1="144.5479" y2="144.5479"/>
+    <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="138" x="75.5" y="138.7389">TKEY response (signed)</text>
+    <!--SRC=[AyaioKbL2F5sZLHmhKZEICnBJrNGS0yErWq9zdHNoCZFpzRauYf8B2h9JCuiICmhKL3oJarKS35IA4ujAaijKb98B5O0Yg0gSV4BHfO7ShcuGDfqxK1iAuXrHQc5fQd59LmWnK09e3nSehWWFwyOw8xYpFIyr1HDBW00]-->
+  </g>
+</svg>

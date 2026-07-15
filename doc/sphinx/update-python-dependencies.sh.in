@@ -1,0 +1,11 @@
+#!/bin/sh
+
+set -eu
+
+if test '@HAVE_PIP_COMPILE@' = 'no'; then
+    exit 0
+fi
+
+cd '@srcdir@'
+@PIP_COMPILE@ --no-strip-extras --output-file=./src/requirements.txt \
+    --rebuild --upgrade ./src/requirements.in

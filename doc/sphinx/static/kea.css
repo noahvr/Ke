@@ -1,0 +1,26 @@
+/* give more screen width to the content as by default it is too narrow
+   and many tables and boxes are squeezed */
+.wy-nav-content {
+    max-width: 1100px;
+}
+
+/* by default table content is not wrapped and then the tables
+   are pretty wide so removing that
+ */
+.wy-table-responsive table td, .wy-table-responsive table th {
+    white-space: normal;
+}
+
+/* Paint literal text black. */
+.rst-content code.literal {
+    color: black;
+}
+
+/* Have literal text that references other sections underlined.
+ * It helps the reader figure out that it's a clickable link.
+ * This type of referencing can be achieved using text roles.
+ * https://www.sphinx-doc.org/en/master/usage/restructuredtext/roles.html
+ */
+.rst-content code.xref {
+    text-decoration: underline dotted gray;
+}

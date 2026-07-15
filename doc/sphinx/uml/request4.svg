@@ -1,0 +1,213 @@
+<?xml version="1.0" encoding="us-ascii" standalone="no"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" contentStyleType="text/css" height="1851px" preserveAspectRatio="none" style="width:713px;height:1851px;background:#FFFFFF;" version="1.1" viewBox="0 0 713 1851" width="713px" zoomAndPan="magnify">
+  <defs/>
+  <g>
+    <text fill="#000000" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacing" textLength="256" x="221.5" y="24.9659">DHCPREQUEST processing (Kea 1.8.0)</text>
+    <!--cluster ack-->
+    <g id="cluster_ack">
+      <rect fill="none" height="791.34" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:1.0;" width="298" x="409" y="759.5379"/>
+      <text fill="#000000" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacing" textLength="145" x="485.5" y="776.5039">A lease was assigned</text>
+    </g>
+    <!--entity setReservedClasses-->
+    <g id="elem_setReservedClasses">
+      <rect fill="#F1F1F1" height="39.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="162" x="439" y="851.3979"/>
+      <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="142" x="449" y="876.3639">Add reserved classes</text>
+    </g>
+    <!--entity requiredClassify-->
+    <g id="elem_requiredClassify">
+      <rect fill="#F1F1F1" height="39.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="186" x="437" y="951.4679"/>
+      <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="166" x="447" y="976.4339">Classify required classes</text>
+    </g>
+    <!--entity buildCfgOptionList-->
+    <g id="elem_buildCfgOptionList">
+      <rect fill="#F1F1F1" height="39.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="204" x="444" y="1051.5379"/>
+      <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="184" x="454" y="1076.5039">Build configured option list</text>
+    </g>
+    <!--entity appendRequestedOptions-->
+    <g id="elem_appendRequestedOptions">
+      <rect fill="#F1F1F1" height="39.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="200" x="453" y="1169.5979"/>
+      <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="180" x="463" y="1194.5639">Append requested options</text>
+    </g>
+    <!--entity appendRequestedVendorOptions-->
+    <g id="elem_appendRequestedVendorOptions">
+      <rect fill="#F1F1F1" height="39.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="251" x="432.5" y="1287.6679"/>
+      <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="231" x="442.5" y="1312.6339">Append requested vendor options</text>
+    </g>
+    <!--entity appendBasicOptions-->
+    <g id="elem_appendBasicOptions">
+      <rect fill="#F1F1F1" height="39.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="166" x="474" y="1387.7379"/>
+      <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="146" x="484" y="1412.7039">Append basic options</text>
+    </g>
+    <!--entity setFixedFields-->
+    <g id="elem_setFixedFields">
+      <rect fill="#F1F1F1" height="39.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="119" x="494.5" y="1487.8079"/>
+      <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="99" x="504.5" y="1512.7739">Set fixed fields</text>
+    </g>
+    <!--entity entry-->
+    <g id="elem_entry">
+      <rect fill="#F1F1F1" height="39.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="94" x="76" y="47.0679"/>
+      <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="74" x="86" y="72.0339">Entry point</text>
+    </g>
+    <!--entity selectSubnet-->
+    <g id="elem_selectSubnet">
+      <rect fill="#F1F1F1" height="39.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="111" x="67.5" y="147.1279"/>
+      <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="91" x="77.5" y="172.0939">Select subnet</text>
+    </g>
+    <g id="elem_GMN4">
+      <path d="M213.5,152.8079 L213.5,162.6679 L178.75,166.6679 L213.5,170.6679 L213.5,180.5139 A0,0 0 0 0 213.5,180.5139 L300.5,180.5139 A0,0 0 0 0 300.5,180.5139 L300.5,162.8079 L290.5,152.8079 L213.5,152.8079 A0,0 0 0 0 213.5,152.8079 " fill="#FEFFDD" style="stroke:#181818;stroke-width:0.5;"/>
+      <path d="M290.5,152.8079 L290.5,162.8079 L300.5,162.8079 L290.5,152.8079 " fill="#FEFFDD" style="stroke:#181818;stroke-width:0.5;"/>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="66" x="219.5" y="171.7049">hook point</text>
+    </g>
+    <!--entity findReservation-->
+    <g id="elem_findReservation">
+      <rect fill="#F1F1F1" height="39.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="162" x="186" y="247.1979"/>
+      <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="142" x="196" y="272.1639">Find host reservation</text>
+    </g>
+    <!--entity known-->
+    <g id="elem_known">
+      <rect fill="#F1F1F1" height="39.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="285" x="167.5" y="347.2679"/>
+      <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="265" x="177.5" y="372.2339">Add either KNOWN or UNKNOWN class</text>
+    </g>
+    <!--entity classify2-->
+    <g id="elem_classify2">
+      <rect fill="#F1F1F1" height="39.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="144" x="244" y="447.3379"/>
+      <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="124" x="254" y="472.3039">Classify (2nd pass)</text>
+    </g>
+    <!--entity processClientName-->
+    <g id="elem_processClientName">
+      <rect fill="#F1F1F1" height="39.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="154" x="242" y="547.3979"/>
+      <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="134" x="252" y="572.3639">Process client name</text>
+    </g>
+    <!--entity assignLease-->
+    <g id="elem_assignLease">
+      <rect fill="#F1F1F1" height="39.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="116" x="263" y="647.4679"/>
+      <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="96" x="273" y="672.4339">Assign a lease</text>
+    </g>
+    <!--entity common-->
+    <g id="elem_common">
+      <rect fill="#F1F1F1" height="39.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="161" x="470.5" y="1605.8779"/>
+      <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="141" x="480.5" y="1630.8439">Adjust interface data</text>
+    </g>
+    <!--entity appendServerID-->
+    <g id="elem_appendServerID">
+      <rect fill="#F1F1F1" height="39.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="138" x="482" y="1705.9379"/>
+      <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="118" x="492" y="1730.9039">Append server ID</text>
+    </g>
+    <g id="elem_GMN22">
+      <path d="M301.5,1711.6279 L301.5,1739.3339 A0,0 0 0 0 301.5,1739.3339 L446.5,1739.3339 A0,0 0 0 0 446.5,1739.3339 L446.5,1729.6279 L481.9,1725.4779 L446.5,1721.6279 L446.5,1721.6279 L436.5,1711.6279 L301.5,1711.6279 A0,0 0 0 0 301.5,1711.6279 " fill="#FEFFDD" style="stroke:#181818;stroke-width:0.5;"/>
+      <path d="M436.5,1711.6279 L436.5,1721.6279 L446.5,1721.6279 L436.5,1711.6279 " fill="#FEFFDD" style="stroke:#181818;stroke-width:0.5;"/>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="124" x="307.5" y="1730.5249">on success exit point</text>
+    </g>
+    <!--entity drop-->
+    <g id="elem_drop">
+      <rect fill="#F1F1F1" height="39.0679" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;" width="153" x="171.5" y="1806.0079"/>
+      <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="133" x="181.5" y="1830.9739">Return no response</text>
+    </g>
+    <g id="elem_GMN26">
+      <path d="M6,1811.6879 L6,1839.3939 A0,0 0 0 0 6,1839.3939 L136,1839.3939 A0,0 0 0 0 136,1839.3939 L136,1829.6879 L171.23,1825.5479 L136,1821.6879 L136,1821.6879 L126,1811.6879 L6,1811.6879 A0,0 0 0 0 6,1811.6879 " fill="#FEFFDD" style="stroke:#181818;stroke-width:0.5;"/>
+      <path d="M126,1811.6879 L126,1821.6879 L136,1821.6879 L126,1811.6879 " fill="#FEFFDD" style="stroke:#181818;stroke-width:0.5;"/>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="109" x="12" y="1830.5849">on error exit point</text>
+    </g>
+    <!--link entry to selectSubnet-->
+    <g id="link_entry_selectSubnet">
+      <path d="M123,86.5079 C123,101.8379 123,123.5779 123,140.3979 " fill="none" id="entry-to-selectSubnet" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="123,145.2979,127,136.2979,123,140.2979,119,136.2979,123,145.2979" style="stroke:#181818;stroke-width:1.0;"/>
+    </g>
+    <!--link selectSubnet to findReservation-->
+    <g id="link_selectSubnet_findReservation">
+      <path d="M150.76,186.5779 C174.57,202.7879 208.91,226.1679 234.09,243.3179 " fill="none" id="selectSubnet-to-findReservation" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="238.07,246.0279,232.8864,237.6535,233.9386,243.2117,228.3804,244.2638,238.07,246.0279" style="stroke:#181818;stroke-width:1.0;"/>
+    </g>
+    <!--link selectSubnet to drop-->
+    <g id="link_selectSubnet_drop">
+      <path d="M116.78,186.5979 C110.91,206.1779 103,237.7579 103,265.7379 C103,265.7379 103,265.7379 103,1726.4779 C103,1764.1179 136.95,1788.2979 171.99,1803.2279 " fill="none" id="selectSubnet-to-drop" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="176.22,1804.9679,169.4398,1797.8245,171.6017,1803.0519,166.3742,1805.2138,176.22,1804.9679" style="stroke:#181818;stroke-width:1.0;"/>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="90" x="104" y="976.3949">hook set DROP</text>
+    </g>
+    <!--link findReservation to known-->
+    <g id="link_findReservation_known">
+      <path d="M275.29,286.6379 C282.13,302.2479 291.89,324.4879 299.31,341.4279 " fill="none" id="findReservation-to-known" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="301.13,345.5679,301.1615,335.7191,299.1139,340.9924,293.8406,338.9449,301.13,345.5679" style="stroke:#181818;stroke-width:1.0;"/>
+    </g>
+    <!--link known to classify2-->
+    <g id="link_known_classify2">
+      <path d="M311.16,386.7079 C312.09,402.0379 313.43,423.7879 314.45,440.6079 " fill="none" id="known-to-classify2" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="314.75,445.5079,318.1775,436.2747,314.4363,440.5178,310.1933,436.7766,314.75,445.5079" style="stroke:#181818;stroke-width:1.0;"/>
+    </g>
+    <!--link classify2 to processClientName-->
+    <g id="link_classify2_processClientName">
+      <path d="M316.58,486.7779 C317.05,502.1079 317.71,523.8579 318.23,540.6779 " fill="none" id="classify2-to-processClientName" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="318.38,545.5779,322.0953,536.4567,318.2229,540.5804,314.0993,536.708,318.38,545.5779" style="stroke:#181818;stroke-width:1.0;"/>
+    </g>
+    <!--link processClientName to assignLease-->
+    <g id="link_processClientName_assignLease">
+      <path d="M319.39,586.8479 C319.7,602.1779 320.14,623.9179 320.48,640.7379 " fill="none" id="processClientName-to-assignLease" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="320.58,645.6379,324.3992,636.5597,320.48,640.6389,316.4008,636.7197,320.58,645.6379" style="stroke:#181818;stroke-width:1.0;"/>
+    </g>
+    <!--link assignLease to ack-->
+    <g id="link_assignLease_ack">
+      <path d="M343.66,686.8979 C363.73,703.6329 393.68,728.6029 418.9225,749.6479 C422.0778,752.2785 425.1596,754.8478 428.1393,757.3321 C428.8842,757.9531 429.6228,758.5688 430.3545,759.1789 " fill="none" id="assignLease-to-ack" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="430.3545,759.1789,426.0032,750.3434,426.5141,755.9771,420.8804,756.488,430.3545,759.1789" style="stroke:#181818;stroke-width:1.0;"/>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="59" x="398" y="731.4349">DHCPACK</text>
+    </g>
+    <!--link assignLease to common-->
+    <g id="link_assignLease_common">
+      <path d="M321.25,686.8479 C321.55,710.6379 322,752.7979 322,788.8979 C322,788.8979 322,788.8979 322,1508.3379 C322,1574.6179 399.27,1603.0579 464.04,1615.2579 " fill="none" id="assignLease-to-common" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="468.77,1616.1179,460.6378,1610.5621,463.8518,1615.2172,459.1967,1618.4312,468.77,1616.1179" style="stroke:#181818;stroke-width:1.0;"/>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="61" x="323" y="1135.4949">DHCPNAK</text>
+    </g>
+    <!--link assignLease to drop-->
+    <g id="link_assignLease_drop">
+      <path d="M300.67,686.8379 C279.07,708.9779 248,747.9579 248,788.8979 C248,788.8979 248,788.8979 248,1726.4779 C248,1751.2579 248,1779.5579 248,1799.3679 " fill="none" id="assignLease-to-drop" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="248,1804.2279,252,1795.2279,248,1799.2279,244,1795.2279,248,1804.2279" style="stroke:#181818;stroke-width:1.0;"/>
+      <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="49" x="249" y="1253.5649">on error</text>
+    </g>
+    <!--link ack to setReservedClasses-->
+    <g id="link_ack_setReservedClasses">
+      <path d="M466.15,790.6279 C468.13,793.5279 488.48,823.5079 503.58,845.7479 " fill="none" id="ack-to-setReservedClasses" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="506.25,849.6779,504.5015,839.9855,503.4404,845.542,497.884,844.4809,506.25,849.6779" style="stroke:#181818;stroke-width:1.0;"/>
+    </g>
+    <!--link setReservedClasses to requiredClassify-->
+    <g id="link_setReservedClasses_requiredClassify">
+      <path d="M521.93,890.8379 C523.49,906.1679 525.71,927.9179 527.42,944.7379 " fill="none" id="setReservedClasses-to-requiredClassify" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="527.92,949.6479,530.9727,940.2841,527.4055,944.6745,523.0151,941.1073,527.92,949.6479" style="stroke:#181818;stroke-width:1.0;"/>
+    </g>
+    <!--link requiredClassify to buildCfgOptionList-->
+    <g id="link_requiredClassify_buildCfgOptionList">
+      <path d="M533.08,990.9079 C535.59,1006.2379 539.13,1027.9879 541.88,1044.8079 " fill="none" id="requiredClassify-to-buildCfgOptionList" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="542.68,1049.7279,545.1863,1040.2033,541.8789,1044.7925,537.2897,1041.4851,542.68,1049.7279" style="stroke:#181818;stroke-width:1.0;"/>
+    </g>
+    <!--link buildCfgOptionList to appendRequestedOptions-->
+    <g id="link_buildCfgOptionList_appendRequestedOptions">
+      <path d="M547.14,1090.9779 C548.32,1110.5379 550.17,1141.1979 551.47,1162.8379 " fill="none" id="buildCfgOptionList-to-appendRequestedOptions" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="551.77,1167.7279,555.2222,1158.5039,551.4697,1162.7369,547.2367,1158.9844,551.77,1167.7279" style="stroke:#181818;stroke-width:1.0;"/>
+    </g>
+    <!--link appendRequestedOptions to appendRequestedVendorOptions-->
+    <g id="link_appendRequestedOptions_appendRequestedVendorOptions">
+      <path d="M553.81,1209.0479 C554.66,1228.6079 555.98,1259.2679 556.91,1280.8979 " fill="none" id="appendRequestedOptions-to-appendRequestedVendorOptions" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="557.12,1285.7979,560.7298,1276.6345,556.9053,1280.8025,552.7372,1276.978,557.12,1285.7979" style="stroke:#181818;stroke-width:1.0;"/>
+    </g>
+    <!--link appendRequestedVendorOptions to appendBasicOptions-->
+    <g id="link_appendRequestedVendorOptions_appendBasicOptions">
+      <path d="M557.81,1327.1079 C557.65,1342.4479 557.43,1364.1879 557.26,1381.0079 " fill="none" id="appendRequestedVendorOptions-to-appendBasicOptions" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="557.21,1385.9079,561.3126,1376.9542,557.2671,1380.9082,553.3131,1376.8628,557.21,1385.9079" style="stroke:#181818;stroke-width:1.0;"/>
+    </g>
+    <!--link appendBasicOptions to setFixedFields-->
+    <g id="link_appendBasicOptions_setFixedFields">
+      <path d="M556.42,1427.1779 C555.95,1442.5079 555.29,1464.2579 554.77,1481.0779 " fill="none" id="appendBasicOptions-to-setFixedFields" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="554.62,1485.9779,558.8754,1477.0958,554.7628,1480.98,550.8787,1476.8673,554.62,1485.9779" style="stroke:#181818;stroke-width:1.0;"/>
+    </g>
+    <!--link setFixedFields to common-->
+    <g id="link_setFixedFields_common">
+      <path d="M553.51,1527.2479 C553.01,1546.8079 552.21,1577.4679 551.65,1599.1079 " fill="none" id="setFixedFields-to-common" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="551.53,1603.9979,555.76,1595.1037,551.6585,1598.9996,547.7627,1594.8981,551.53,1603.9979" style="stroke:#181818;stroke-width:1.0;"/>
+    </g>
+    <!--link common to appendServerID-->
+    <g id="link_common_appendServerID">
+      <path d="M551,1645.3179 C551,1660.6479 551,1682.3879 551,1699.2179 " fill="none" id="common-to-appendServerID" style="stroke:#181818;stroke-width:1.0;"/>
+      <polygon fill="#181818" points="551,1704.1079,555,1695.1079,551,1699.1079,547,1695.1079,551,1704.1079" style="stroke:#181818;stroke-width:1.0;"/>
+    </g>
+    <!--link appendServerID to drop-->
+    <!--SRC=[VLJBRjim4BphAnOv9GS7RKv53WKSsKO31xOhD-sXw86MLZ9hcLH9AWyK_VUIIucI9ISNGpixiwA6EpRSb0YpB_4ccNzzd6-_GQLaYbfpKS3b4XbylFvq_U4gYbY1mi35N1Zr2fNambm0qu2k3jqjbfWQqFLEeEzhGhO4H48Q1CMBlO5Rs4jvy8E2VC55Pd5jGA56zSGCbuB6vBQJT5XGJBCCa9izAbYkrZzM81KyhlnZMZAjINqGyhdJn0xd-IjStjZNLRQu8bRQu3U1kV5Us0vtjM1796RZKKpmogBTUUo4GW234fdsP4RGWwkZI5apc2YivnTJpu7dmC7C2z83_8sWzuNU3Spy4L4tpfgamMCF1qtuGeL_Qgu6mXPiMK5sL_FIKgN8UL4xbQoSsL1oxIzpvmXnNgm9Vx1mTyogGf7HRDGcQFqR6JMJjkVb-ctjaotjHRupuZintXYqOvgdPzHt3XzgjcZiThtOj-OSoonukt3OWg3eNs_VVjTsFUtIeifPYf0nm_psoEEnlvZ-A7G_2kvdlMDi2RkV-JYKcBiqM9jrdTAsuGitWs0aQ6ebG4Yt2fKzlb-jJCbgE0MLijRrPr14OJBvV1h6Va7TOSO61CjmxskJQos2MRBUH0CPZVA1er-gksY59yB7GHeXnEjdgFViUpOkj_GNDesNeww_beQmcWu9tKUrraLkdZThbAynHCnHe8O0iSw4PmpvBpeVb_FmESLfEjvhzjGdwHX3hIVzN9oMFR-ZnlPkUbZwqn8cF_Syor3yQcuY-Wy0]-->
+  </g>
+</svg>
